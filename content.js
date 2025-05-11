@@ -2,7 +2,7 @@
 const MODEL = "mistralai/mistral-7b-instruct:free";
 const MAX_TOKENS = 300;
 const TEMPERATURE = 0.7;
-const RPD_LIMIT = 100; // OpenRouter's free tier daily limit
+const RPD_LIMIT = 50; // OpenRouter's free tier daily limit
 
 // State management
 let isRequestInProgress = false;
@@ -183,7 +183,7 @@ function attachReplyBar(commentBox) {
 
   // Label for tone container
   const toneLabel = document.createElement('label');
-  toneLabel.textContent = 'Tone:';
+  toneLabel.textContent = '';
   toneLabel.setAttribute('for', 'tone-container');
   toneContainer.id = 'tone-container';
 
