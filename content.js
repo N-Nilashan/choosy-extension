@@ -31,6 +31,7 @@ const baseFloatingBarStyle = `
   max-width: 500px;
   box-sizing: border-box;
   pointer-events: auto;
+  background: inherit;
 `;
 
 const baseButtonStyle = `
@@ -75,6 +76,9 @@ const floatingBarHTML = `
   <div class="loading-indicator"></div>
 </div>
 <style>
+  .choosyai-bar * {
+    pointer-events: auto !important;
+  }
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -187,7 +191,7 @@ function handleFloatingBar(commentBox) {
     const bar = document.createElement('div');
     bar.innerHTML = floatingBarHTML;
     try {
-      commentBox.parentNode.appendChild(bar);
+      commentBox.parentNode.insertBefore(bar, commentBox.nextSibling);
     } catch (error) {
       console.error('[Choosyai] Failed to append floating bar:', error);
       return;
@@ -200,12 +204,6 @@ function handleFloatingBar(commentBox) {
 
     // Dynamically position the bar below the comment box
     const updateBarPosition = debounce(() => {
-      console.log('[Choosyai] updateBarPosition called, currentFloatingBar state:', {
-        exists: !!currentFloatingBar,
-        isConnected: currentFloatingBar?.isConnected,
-        hasParent: !!currentFloatingBar?.parentNode,
-        hasStyle: !!currentFloatingBar?.style
-      });
       if (!currentFloatingBar || !currentFloatingBar.isConnected || !currentFloatingBar.parentNode || !currentFloatingBar.style) {
         console.log('[Choosyai] Skipping updateBarPosition: Floating bar is invalid or not connected');
         return;
@@ -224,7 +222,6 @@ function handleFloatingBar(commentBox) {
     }, 100);
 
     updateBarPosition();
-    console.log('[Choosyai] Adding resize and scroll event listeners');
     window.addEventListener('resize', updateBarPosition);
     window.addEventListener('scroll', updateBarPosition);
 
@@ -244,18 +241,12 @@ function handleFloatingBar(commentBox) {
     const loadingIndicator = currentFloatingBar.querySelector('.loading-indicator');
     const toneButtons = currentFloatingBar.querySelectorAll('.tone-btn');
 
-    console.log('[Choosyai] Attaching button listeners');
     toneButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
         console.log('[Choosyai] Tone button clicked:', btn.dataset.tone);
-        toneButtons.forEach(b => {
-          b.classList.remove('active');
-          b.style.background = '';
-          b.style.color = '';
-          b.style.border = '';
-        });
+        toneButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedTone = btn.dataset.tone;
       });
@@ -263,7 +254,7 @@ function handleFloatingBar(commentBox) {
 
     generateBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       console.log('[Choosyai] Generate button clicked');
       if (isLoading) return;
       try {
@@ -294,7 +285,7 @@ function handleFloatingBar(commentBox) {
 
     clearBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       console.log('[Choosyai] Clear button clicked');
       clearCommentBox(currentCommentBox);
     });
@@ -479,242 +470,38 @@ function showAPIKeyWarning() {
   }
 }
 
-function inspectXDom() {
-  console.log('=== [Choosyai] Detailed X/Twitter DOM Inspection ===');
-
-  const allEditables = document.querySelectorAll('[contenteditable="true"]');
-  console.log(`[Choosyai] Found ${allEditables.length} contentEditable elements on the page:`);
-  allEditables.forEach((el, i) => {
-    console.log(`[Choosyai] ContentEditable #${i}:`, {
-      element: el,
-      role: el.getAttribute('role'),
-      ariaLabel: el.getAttribute('aria-label'),
-      dataText: el.getAttribute('data-text'),
-      parentTestId: el.closest('[data-testid]')?.getAttribute('data-testid'),
-      isVisible: isElementVisible(el),
-      textContent: el.textContent?.substring(0, 50) + (el.textContent?.length > 50 ? '...' : '')
-    });
-  });
-
-  const allTextboxes = document.querySelectorAll('[role="textbox"]');
-  console.log(`[Choosyai] Found ${allTextboxes.length} elements with role="textbox":`);
-  allTextboxes.forEach((el, i) => {
-    console.log(`[Choosyai] Textbox #${i}:`, {
-      element: el,
-      isContentEditable: el.isContentEditable,
-      ariaLabel: el.getAttribute('aria-label'),
-      dataText: el.getAttribute('data-text'),
-      parentTestId: el.closest('[data-testid]')?.getAttribute('data-testid'),
-      isVisible: isElementVisible(el),
-      textContent: el.textContent?.substring(0, 50) + (el.textContent?.length > 50 ? '...' : '')
-    });
-  });
-
-  const dataTestIds = ['tweetTextarea', 'reply', 'tweet', 'post', 'editor', 'composer_text_editor', 'ConversationBody'];
-  dataTestIds.forEach(testId => {
-    const elements = document.querySelectorAll(`[data-testid*="${testId}"], [aria-label*="${testId}" i]`);
-    console.log(`[Choosyai] Found ${elements.length} elements with data-testid or aria-label containing "${testId}"`);
-    elements.forEach((el, i) => {
-      console.log(`[Choosyai] ${testId} #${i}:`, {
-        element: el,
-        dataTestId: el.getAttribute('data-testid'),
-        ariaLabel: el.getAttribute('aria-label'),
-        hasTextbox: !!el.querySelector('[role="textbox"]'),
-        hasContentEditable: !!el.querySelector('[contenteditable="true"]'),
-        isVisible: isElementVisible(el)
-      });
-    });
-  });
-
-  const possibleInputContainers = document.querySelectorAll('div[class*="public"], div[class*="draft"], div[class*="editor"], div[class*="text"], div[class*="input"]');
-  console.log(`[Choosyai] Found ${possibleInputContainers.length} potential input containers by class name`);
-
-  return "[Choosyai] Inspection completed. Check console for details.";
-}
-
-function debugFloatingBar() {
-  if (!currentFloatingBar) {
-    console.log('[Choosyai] Floating bar is not inserted');
-    return;
-  }
-  console.log('[Choosyai] Floating bar debug:', {
-    element: currentFloatingBar,
-    outerHTML: currentFloatingBar.outerHTML,
-    computedStyle: window.getComputedStyle(currentFloatingBar),
-    boundingRect: currentFloatingBar.getBoundingClientRect(),
-    isVisible: isElementVisible(currentFloatingBar)
-  });
-}
-
-function isElementVisible(el) {
-  if (!el) return false;
-  const style = window.getComputedStyle(el);
-  const rect = el.getBoundingClientRect();
-  return (
-    style.display !== 'none' &&
-    style.visibility !== 'hidden' &&
-    style.opacity !== '0' &&
-    rect.width > 0 &&
-    rect.height > 0
-  );
-}
-
 function findCommentBox(element) {
   if (!element || typeof element.closest !== 'function') return null;
+  if (element.closest('.choosyai-bar')) return null;
 
-  if (element.closest('.choosyai-bar')) {
-    return null;
-  }
-
-  let commentBox = null;
   const hostname = window.location.hostname;
 
+  // X/Twitter specific detection
   if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
-    const specificEditor = element.closest('[data-testid="tweetTextarea"], [data-testid="composer"], [data-testid="replyTextarea"]')?.querySelector('div[contenteditable="true"][role="textbox"]');
-    if (specificEditor && isElementVisible(specificEditor)) {
-      console.log('[Choosyai] Found specific editor:', specificEditor);
-      return specificEditor;
+    // Try to find the main composer box
+    const composer = document.querySelector('[data-testid="tweetTextarea_0"], [data-testid="tweetTextarea"], [role="textbox"][aria-label="Post text"]');
+    if (composer) return composer;
+
+    // Fallback to any contenteditable in the composer area
+    const composerArea = document.querySelector('[data-testid="tweetButton"], [data-testid="tweetButtonInline"]')?.closest('[role="dialog"], [aria-labelledby]');
+    if (composerArea) {
+      const editable = composerArea.querySelector('[contenteditable="true"][role="textbox"]');
+      if (editable) return editable;
     }
 
-    if (
-      element.getAttribute('role') === 'textbox' &&
-      element.isContentEditable &&
-      (element.getAttribute('aria-label')?.toLowerCase().includes('tweet') ||
-        element.getAttribute('aria-label')?.toLowerCase().includes('reply') ||
-        element.getAttribute('aria-label')?.toLowerCase().includes('post'))
-    ) {
-      console.log('[Choosyai] Found direct textbox match:', element);
-      return element;
-    }
+    // Last resort - any contenteditable textbox
+    return document.querySelector('[contenteditable="true"][role="textbox"]');
+  }
 
-    const parentContext = element.closest('div[data-testid^="cellInnerDiv"], div[role="dialog"], div[data-testid="primaryColumn"]');
-    if (parentContext) {
-      const potentialBox = parentContext.querySelector(
-        'div[contenteditable="true"][role="textbox"][aria-label*="Tweet"], div[contenteditable="true"][role="textbox"][aria-label*="Reply"], div[contenteditable="true"][role="textbox"][aria-label*="Post"]'
-      );
-      if (potentialBox && isElementVisible(potentialBox)) {
-        console.log('[Choosyai] Found potential box in parent context:', potentialBox);
-        return potentialBox;
-      }
-    }
-
-    const draftEditor = document.querySelector(
-      'div[class*="DraftEditor-root"] div[contenteditable="true"], div[class*="public-DraftEditor-content"][contenteditable="true"], div[class*="composer"] div[contenteditable="true"]'
-    );
-    if (draftEditor && isElementVisible(draftEditor) && (draftEditor === element || draftEditor.contains(element))) {
-      console.log('[Choosyai] Found draft editor:', draftEditor);
-      return draftEditor;
-    }
-
-    if (element.matches('div[contenteditable="true"][role="textbox"]')) {
-      console.log('[Choosyai] Found direct contenteditable match:', element);
-      return element;
-    }
-  } else if (hostname.includes('linkedin.com')) {
+  // LinkedIn specific detection
+  if (hostname.includes('linkedin.com')) {
     if (element.matches('.comments-comment-box__editor, .ql-editor[role="textbox"], .msg-form__contenteditable[role="textbox"]')) {
-      console.log('[Choosyai] Found LinkedIn direct match:', element);
       return element;
     }
-    commentBox = element
-      .closest('.comments-comment-box, .comment-input, .msg-form__compose-area, .feed-shared-comment-box')
-      ?.querySelector(
-        '.comments-comment-box__editor, .ql-editor[role="textbox"], .msg-form__contenteditable[role="textbox"], div[contenteditable="true"][role="textbox"]'
-      );
-    if (commentBox && isElementVisible(commentBox)) {
-      console.log('[Choosyai] Found LinkedIn comment box:', commentBox);
-      return commentBox;
-    }
+    return element.closest('.comments-comment-box, .comment-input, .msg-form__compose-area, .feed-shared-comment-box')
+      ?.querySelector('.comments-comment-box__editor, .ql-editor[role="textbox"], .msg-form__contenteditable[role="textbox"], div[contenteditable="true"][role="textbox"]');
   }
   return null;
-}
-
-function handleFocusOrClick(event) {
-  const targetElement = event.target;
-  let potentialBox = findCommentBox(targetElement);
-  let source = event.type;
-
-  console.log('[Choosyai] handleFocusOrClick triggered:', { eventType: source, targetElement });
-
-  if (potentialBox) {
-    handleFloatingBar(potentialBox);
-  } else {
-    let parent = targetElement.parentNode;
-    while (parent && parent !== document.body) {
-      potentialBox = findCommentBox(parent);
-      if (potentialBox) {
-        handleFloatingBar(potentialBox);
-        break;
-      }
-      parent = parent.parentNode;
-    }
-  }
-}
-
-document.addEventListener('focusin', handleFocusOrClick, true);
-document.addEventListener('click', handleFocusOrClick, true);
-
-// Initial check for already active element
-if (document.activeElement) {
-  console.log('[Choosyai] Checking initial active element:', document.activeElement);
-  const initialBox = findCommentBox(document.activeElement);
-  if (initialBox) {
-    handleFloatingBar(initialBox);
-  } else {
-    let parent = document.activeElement.parentNode;
-    while (parent && parent !== document.body) {
-      const parentBox = findCommentBox(parent);
-      if (parentBox) {
-        handleFloatingBar(parentBox);
-        break;
-      }
-      parent = parent.parentNode;
-    }
-  }
-}
-
-// Mutation Observer for X/Twitter
-if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
-  const observer = new MutationObserver((mutationsList) => {
-    for (const mutation of mutationsList) {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        mutation.addedNodes.forEach(node => {
-          if (node instanceof Element) {
-            let commentInput = findCommentBox(node);
-            if (commentInput && isElementVisible(commentInput)) {
-              console.log('[Choosyai] MutationObserver found comment input:', commentInput);
-              handleFloatingBar(commentInput);
-              return;
-            }
-            const nestedCommentInput = node.querySelector('div[contenteditable="true"][role="textbox"], div[class*="DraftEditor-root"] div[contenteditable="true"], div[class*="composer"] div[contenteditable="true"]');
-            if (nestedCommentInput && isElementVisible(nestedCommentInput)) {
-              console.log('[Choosyai] MutationObserver found nested comment input:', nestedCommentInput);
-              handleFloatingBar(nestedCommentInput);
-            }
-          }
-        });
-      } else if (mutation.type === 'attributes' && mutation.target instanceof Element) {
-        const commentInput = findCommentBox(mutation.target);
-        if (commentInput && isElementVisible(commentInput)) {
-          console.log('[Choosyai] MutationObserver found comment input via attributes:', commentInput);
-          handleFloatingBar(commentInput);
-        }
-      }
-    }
-  });
-
-  const targetNode = document.querySelector('body');
-  if (targetNode) {
-    const config = {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['contenteditable', 'role', 'class', 'style', 'data-testid', 'aria-label'],
-    };
-    observer.observe(targetNode, config);
-    console.log('[Choosyai] MutationObserver started');
-  } else {
-    console.warn('[Choosyai] Could not find body element for MutationObserver');
-  }
 }
 
 function insertComment(commentBox, text) {
@@ -727,97 +514,33 @@ function insertComment(commentBox, text) {
     commentBox.focus();
 
     if (currentPlatform === 'twitter') {
-      let insertionSuccessful = false;
-      let attempts = 0;
-      const maxAttempts = 3;
+      // Twitter/X specific insertion
+      const range = document.createRange();
+      range.selectNodeContents(commentBox);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
 
-      const tryInsert = async () => {
-        while (attempts < maxAttempts && !insertionSuccessful) {
-          attempts++;
+      // Clear existing content
+      commentBox.textContent = '';
 
-          // Method 1: execCommand with insertText
-          try {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(commentBox);
-            selection.removeAllRanges();
-            selection.addRange(range);
+      // Insert new text
+      commentBox.textContent = text;
 
-            if (document.queryCommandSupported('insertText')) {
-              document.execCommand('insertText', false, text);
-            } else {
-              document.execCommand('delete', false, null);
-              document.execCommand('insertHTML', false, text);
-            }
-
-            ['input', 'change'].forEach(eventType => {
-              commentBox.dispatchEvent(new Event(eventType, { bubbles: true, composed: true }));
-            });
-            ['keydown', 'keyup'].forEach(eventType => {
-              commentBox.dispatchEvent(new KeyboardEvent(eventType, { key: 'Enter', bubbles: true, composed: true }));
-            });
-
-            await new Promise(resolve => setTimeout(resolve, 100));
-            if (commentBox.textContent.includes(text) || commentBox.innerHTML.includes(text)) {
-              insertionSuccessful = true;
-            }
-          } catch (e) {
-            console.warn('[Choosyai] Twitter Method 1 (execCommand) failed:', e);
-          }
-
-          // Method 2: Simulate keypresses
-          if (!insertionSuccessful) {
-            try {
-              commentBox.textContent = '';
-              const inputEvent = new Event('input', { bubbles: true, composed: true });
-              for (const char of text) {
-                commentBox.textContent += char;
-                commentBox.dispatchEvent(inputEvent);
-                commentBox.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true, composed: true }));
-                commentBox.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true, composed: true }));
-              }
-              await new Promise(resolve => setTimeout(resolve, 100));
-              if (commentBox.textContent === text) {
-                insertionSuccessful = true;
-              }
-            } catch (e) {
-              console.warn('[Choosyai] Twitter Method 2 (keypress simulation) failed:', e);
-            }
-          }
-
-          // Method 3: Direct DOM manipulation
-          if (!insertionSuccessful) {
-            try {
-              commentBox.innerHTML = `<span>${text}</span>`;
-              ['input', 'change'].forEach(eventType => {
-                commentBox.dispatchEvent(new Event(eventType, { bubbles: true, composed: true }));
-              });
-              ['keydown', 'keyup'].forEach(eventType => {
-                commentBox.dispatchEvent(new KeyboardEvent(eventType, { key: 'Enter', bubbles: true, composed: true }));
-              });
-              await new Promise(resolve => setTimeout(resolve, 100));
-              if (commentBox.textContent.includes(text)) {
-                insertionSuccessful = true;
-              }
-            } catch (e) {
-              console.warn('[Choosyai] Twitter Method 3 (direct DOM) failed:', e);
-            }
-          }
-        }
-      };
-
-      tryInsert().then(() => {
-        if (insertionSuccessful) {
-          ['blur', 'focus'].forEach(eventType => {
-            commentBox.dispatchEvent(new Event(eventType, { bubbles: true, composed: true }));
-          });
-        } else {
-          console.error('[Choosyai] All Twitter insertion methods failed after', maxAttempts, 'attempts');
-          commentBox.textContent = text;
-          commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-        }
+      // Dispatch necessary events
+      const inputEvent = new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        inputType: 'insertText',
+        data: text
       });
+      commentBox.dispatchEvent(inputEvent);
+
+      const changeEvent = new Event('change', { bubbles: true });
+      commentBox.dispatchEvent(changeEvent);
     } else {
+      // LinkedIn insertion
       if (commentBox.classList?.contains('ql-editor')) {
         const quill = commentBox.closest('.ql-container')?.__quill;
         if (quill) {
@@ -827,22 +550,15 @@ function insertComment(commentBox, text) {
         }
       } else if (commentBox.isContentEditable) {
         commentBox.textContent = text;
-      } else if (typeof commentBox.value !== 'undefined') {
-        commentBox.value = text;
-      } else {
-        document.execCommand('insertText', false, text);
       }
       commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
       commentBox.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
     }
   } catch (error) {
     console.error('[Choosyai] Error inserting comment:', error);
-    try {
-      commentBox.textContent = text;
-      commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    } catch (e) {
-      console.error('[Choosyai] Even ultimate fallback insertion failed:', e);
-    }
+    // Fallback
+    commentBox.textContent = text;
+    commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   }
 }
 
@@ -857,7 +573,6 @@ function clearCommentBox(commentBox) {
         commentBox.textContent = '';
         commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
         commentBox.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-        commentBox.dispatchEvent(new KeyboardEvent('keyup', { key: 'Backspace', bubbles: true, composed: true }));
       } else if (typeof commentBox.value !== 'undefined') {
         commentBox.value = '';
         commentBox.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
@@ -890,11 +605,6 @@ function clearCommentBox(commentBox) {
 
 function cleanupFloatingBar() {
   if (currentFloatingBar && currentFloatingBar.parentNode) {
-    console.log('[Choosyai] Cleaning up floating bar, current state:', {
-      exists: !!currentFloatingBar,
-      isConnected: currentFloatingBar.isConnected,
-      hasParent: !!currentFloatingBar.parentNode
-    });
     currentFloatingBar.__cleanup?.();
     currentFloatingBar.parentNode.removeChild(currentFloatingBar);
     currentFloatingBar = null;
@@ -902,25 +612,72 @@ function cleanupFloatingBar() {
   currentCommentBox = null;
 }
 
+// Event listeners
+document.addEventListener('focusin', (e) => {
+  const targetElement = e.target;
+  const potentialBox = findCommentBox(targetElement);
+  if (potentialBox) {
+    handleFloatingBar(potentialBox);
+  }
+}, true);
+
+document.addEventListener('click', (e) => {
+  const targetElement = e.target;
+  const potentialBox = findCommentBox(targetElement);
+  if (potentialBox) {
+    handleFloatingBar(potentialBox);
+  }
+}, true);
+
+// Initial check for already active element
+if (document.activeElement) {
+  const initialBox = findCommentBox(document.activeElement);
+  if (initialBox) {
+    handleFloatingBar(initialBox);
+  }
+}
+
+// Mutation Observer for X/Twitter
+if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+  const observer = new MutationObserver((mutationsList) => {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        mutation.addedNodes.forEach(node => {
+          if (node instanceof Element) {
+            const commentInput = findCommentBox(node);
+            if (commentInput && isElementVisible(commentInput)) {
+              handleFloatingBar(commentInput);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  const targetNode = document.body;
+  if (targetNode) {
+    observer.observe(targetNode, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['contenteditable', 'role', 'class', 'style', 'data-testid', 'aria-label'],
+    });
+  }
+}
+
+// History state changes
 const originalPushState = history.pushState;
 history.pushState = function () {
-  console.log('[Choosyai] pushState called, cleaning up floating bar');
   cleanupFloatingBar();
   return originalPushState.apply(history, arguments);
 };
 
 const originalReplaceState = history.replaceState;
 history.replaceState = function () {
-  console.log('[Choosyai] replaceState called, cleaning up floating bar');
   cleanupFloatingBar();
   return originalReplaceState.apply(history, arguments);
 };
 
 window.addEventListener('unload', cleanupFloatingBar);
 
-window.addEventListener('error', (event) => {
-  console.error('[Choosyai] Global error caught by content script:', event.error, event.message, event.filename, event.lineno, event.colno);
-});
-
 console.log('[Choosyai] Content script loaded and initialized.');
-
