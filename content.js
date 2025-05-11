@@ -404,8 +404,9 @@ function showAPIKeyWarning() {
 function findCommentBox(element) {
   if (!element) return null;
 
+  // Avoid selecting the floating bar itself
   if (element.closest('.choosyai-bar')) {
-    return currentCommentBox;
+    return null; // Prevent floating bar from being selected as comment box
   }
 
   if (window.location.hostname.includes('twitter.com') ||
@@ -420,7 +421,10 @@ function findCommentBox(element) {
                      document.querySelector('[data-testid="tweetTextarea_0"] div[contenteditable="true"]');
 
     console.log('Twitter Comment Box Detection:', tweetBoxContainer, 'Final Box:', tweetBox);
-    return tweetBox || null;
+    if (tweetBox && (tweetBox.isContentEditable || tweetBox.getAttribute('role') === 'textbox')) {
+      return tweetBox;
+    }
+    return null;
   }
 
   const commentBox = element.closest('.comments-comment-box, .comment-input')?.querySelector(
@@ -434,13 +438,13 @@ function findCommentBox(element) {
 }
 
 function insertComment(commentBox, text) {
-  if (!commentBox || !text) {
-    console.error('Insert Comment Failed: No comment box or text provided');
+  if (!commentBox || !text || !commentBox.isConnected) {
+    console.error('Insert Comment Failed: Invalid comment box or text provided', commentBox);
     return;
   }
 
   try {
-    console.log('Inserting Comment into:', commentBox, 'Text:', text);
+    console.log('Inserting Comment into:', commentBox, 'Text:', text, 'Is ContentEditable:', commentBox.isContentEditable);
 
     // Clear the comment box completely before inserting new text
     clearCommentBox(commentBox);
@@ -461,11 +465,14 @@ function insertComment(commentBox, text) {
         selection.removeAllRanges();
         selection.addRange(range);
 
-        commentBox.dispatchEvent(new Event('input', { bubbles: true }));
-        commentBox.dispatchEvent(new Event('change', { bubbles: true }));
-        commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
+        // Force editor state update with a delay
+        setTimeout(() => {
+          commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+          commentBox.dispatchEvent(new Event('change', { bubbles: true }));
+          commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
+          console.log('Comment Inserted Successfully:', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
+        }, 50);
 
-        console.log('Comment Inserted Successfully:', commentBox.textContent);
       } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
         commentBox.value = text;
         commentBox.dispatchEvent(new Event('input', { bubbles: true }));
