@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "ChoosyAI",
-  "version": "1.0.0",
-  "description": "Generate comments for LinkedIn and Twitter/X posts with AI.",
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
+  "version": "1.0",
+  "description": "AI-powered comment generator for LinkedIn and Twitter/X",
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["*://*.linkedin.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["*://*.linkedin.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
@@ -15,8 +20,11 @@
     }
   ],
   "options_page": "options/options.html",
-  "icons": {
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+  "action": {
+    "default_popup": "options/options.html",
+    "default_icon": {
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   }
 }
