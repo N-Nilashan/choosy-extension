@@ -451,38 +451,66 @@ function insertComment(commentBox, text) {
 
     if (currentPlatform === 'twitter') {
       if (commentBox.isContentEditable) {
-        // Method 1: Try using document.execCommand('insertText')
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(commentBox);
-        range.deleteContents();
-        selection.removeAllRanges();
-        selection.addRange(range);
+        // Simulate typing the text character by character with cursor management
+        let i = 0;
+        function typeNext() {
+          if (i < text.length) {
+            const char = text[i];
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(commentBox);
+            range.collapse(false); // Move cursor to the end
+            selection.removeAllRanges();
+            selection.addRange(range);
 
-        const success = document.execCommand('insertText', false, text);
-        if (success) {
-          console.log('InsertText command executed successfully');
-        } else {
-          console.warn('InsertText command failed, falling back to paste method');
-          // Method 2: Fallback to clipboard paste
-          const pasteEvent = new ClipboardEvent('paste', {
-            clipboardData: new DataTransfer(),
-            bubbles: true,
-            cancelable: true
-          });
-          pasteEvent.clipboardData.setData('text/plain', text);
-          commentBox.dispatchEvent(pasteEvent);
+            // Dispatch keydown event
+            const keydownEvent = new KeyboardEvent('keydown', {
+              key: char,
+              code: 'Key' + char.toUpperCase(),
+              bubbles: true,
+              cancelable: true
+            });
+            commentBox.dispatchEvent(keydownEvent);
+
+            // Dispatch keypress event
+            const keypressEvent = new KeyboardEvent('keypress', {
+              key: char,
+              code: 'Key' + char.toUpperCase(),
+              bubbles: true,
+              cancelable: true
+            });
+            commentBox.dispatchEvent(keypressEvent);
+
+            // Dispatch input event
+            const inputEvent = new Event('input', { bubbles: true });
+            commentBox.dispatchEvent(inputEvent);
+
+            // Dispatch selectionchange to update cursor position
+            const selectionChangeEvent = new Event('selectionchange', { bubbles: true });
+            document.dispatchEvent(selectionChangeEvent);
+
+            i++;
+            setTimeout(typeNext, 10); // Small delay between characters
+          } else {
+            // Final events after typing is complete
+            commentBox.dispatchEvent(new Event('change', { bubbles: true }));
+            commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
+            // Force re-render by blurring and refocusing if text is not visible
+            setTimeout(() => {
+              if (!commentBox.textContent.includes(text)) {
+                commentBox.blur();
+                setTimeout(() => {
+                  commentBox.focus();
+                  commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+                  console.log('Comment Inserted Successfully (after re-render):', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
+                }, 100);
+              } else {
+                console.log('Comment Inserted Successfully:', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
+              }
+            }, 50);
+          }
         }
-
-        // Simulate typing events to ensure Draft.js picks up the change
-        setTimeout(() => {
-          commentBox.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-          commentBox.dispatchEvent(new Event('input', { bubbles: true }));
-          commentBox.dispatchEvent(new Event('change', { bubbles: true }));
-          commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
-          console.log('Comment Inserted Successfully:', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
-        }, 100);
-
+        typeNext();
       } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
         commentBox.value = text;
         commentBox.dispatchEvent(new Event('input', { bubbles: true }));
