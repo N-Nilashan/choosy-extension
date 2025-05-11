@@ -132,114 +132,115 @@ const floatingBarHTML = `
 `;
 
 function handleFloatingBar(commentBox) {
-  if (!commentBox) return;
+    if (!commentBox) return;
 
-  if (currentCommentBox && currentCommentBox !== commentBox) {
-    if (currentFloatingBar && currentFloatingBar.parentNode) {
-      currentFloatingBar.parentNode.removeChild(currentFloatingBar);
+    if (currentCommentBox && currentCommentBox !== commentBox) {
+        if (currentFloatingBar && currentFloatingBar.parentNode) {
+            currentFloatingBar.parentNode.removeChild(currentFloatingBar);
+        }
+        currentFloatingBar = null;
+        currentCommentBox = null;
     }
-    currentFloatingBar = null;
-    currentCommentBox = null;
-  }
 
-  if (commentBox && !currentFloatingBar) {
-    const bar = document.createElement('div');
-    bar.innerHTML = floatingBarHTML.replace('${baseFloatingBarStyle} ${lightStyles}', `${baseFloatingBarStyle} ${lightStyles}`);
-    commentBox.parentNode.insertBefore(bar, commentBox.nextSibling);
-    currentFloatingBar = bar;
-    currentCommentBox = commentBox;
+    if (commentBox && !currentFloatingBar) {
+        const bar = document.createElement('div');
+        bar.innerHTML = floatingBarHTML.replace('${baseFloatingBarStyle} ${lightStyles}', `${baseFloatingBarStyle} ${lightStyles}`);
+        commentBox.parentNode.insertBefore(bar, commentBox.nextSibling);
+        currentFloatingBar = bar;
+        currentCommentBox = commentBox;
 
-    // Detect platform
-    currentPlatform = window.location.hostname.includes('twitter.com') ||
-                     window.location.hostname.includes('x.com') ? 'twitter' : 'linkedin';
+        // Detect platform
+        currentPlatform = window.location.hostname.includes('twitter.com') ||
+                            window.location.hostname.includes('x.com') ? 'twitter' : 'linkedin';
 
-    currentPostText = getPostText();
+        currentPostText = getPostText();
 
-    // Reinitialize UI elements after re-render
-    const generateBtn = bar.querySelector('.generate-btn');
-    const clearBtn = bar.querySelector('.clear-btn');
-    const loadingIndicator = bar.querySelector('.loading-indicator');
-    const toneButtons = bar.querySelectorAll('.tone-btn');
+        // Reinitialize UI elements after re-render
+        const generateBtn = bar.querySelector('.generate-btn');
+        const clearBtn = bar.querySelector('.clear-btn');
+        const loadingIndicator = bar.querySelector('.loading-indicator');
+        const toneButtons = bar.querySelectorAll('.tone-btn');
 
-    // Tone button click handler
-    toneButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        // Tone button click handler
+        toneButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-        toneButtons.forEach(b => {
-          b.classList.remove('active');
-          b.style.background = 'transparent';
-          b.style.color = '#657786';
-          b.style.border = '1px solid #E1E8ED';
+                toneButtons.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'transparent';
+                    b.style.color = '#657786';
+                    b.style.border = '1px solid #E1E8ED';
+                });
+
+                e.target.classList.add('active');
+                e.target.style.background = '#1DA1F2';
+                e.target.style.color = 'white';
+                e.target.style.border = '1px solid #1DA1F2';
+                selectedTone = e.target.dataset.tone;
+            });
         });
 
-        e.target.classList.add('active');
-        e.target.style.background = '#1DA1F2';
-        e.target.style.color = 'white';
-        e.target.style.border = '1px solid #1DA1F2';
-        selectedTone = e.target.dataset.tone;
-      });
-    });
+        // Generate button click handler
+        generateBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-    // Generate button click handler
-    generateBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+            if (isLoading) return;
 
-      if (isLoading) return;
+            try {
+                isLoading = true;
+                generateBtn.disabled = true;
+                clearBtn.disabled = true;
+                loadingIndicator.style.display = 'block';
+                generateBtn.style.width = '70px';
 
-      try {
-        isLoading = true;
-        generateBtn.disabled = true;
-        clearBtn.disabled = true;
-        loadingIndicator.style.display = 'block';
-        generateBtn.style.width = '70px';
+                const comment = await generateAIComment(currentPostText, selectedTone, currentPlatform);
+                insertComment(currentCommentBox, comment);
+            } catch (error) {
+                console.error('Error generating comment:', error);
+                let errorMessage = "Couldn't generate comment. Please try again.";
+                if (error.message.includes('Rate limit exceeded')) {
+                    errorMessage = "Rate limit exceeded. Add credits or wait for the limit to reset.";
+                }
+                insertComment(currentCommentBox, errorMessage);
+            } finally {
+                isLoading = false;
+                generateBtn.disabled = false;
+                clearBtn.disabled = false;
+                loadingIndicator.style.display = 'none';
+                generateBtn.style.width = '80px';
+            }
+        });
 
-        const comment = await generateAIComment(currentPostText, selectedTone, currentPlatform);
-        insertComment(currentCommentBox, comment);
-      } catch (error) {
-        console.error('Error generating comment:', error);
-        let errorMessage = "Couldn't generate comment. Please try again.";
-        if (error.message.includes('Rate limit exceeded')) {
-          errorMessage = "Rate limit exceeded. Add credits or wait for the limit to reset.";
-        }
-        insertComment(currentCommentBox, errorMessage);
-      } finally {
-        isLoading = false;
-        generateBtn.disabled = false;
-        clearBtn.disabled = false;
-        loadingIndicator.style.display = 'none';
-        generateBtn.style.width = '80px';
-      }
-    });
-
-    // Clear button click handler
-    clearBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      clearCommentBox(currentCommentBox);
-    });
-  }
+        // Clear button click handler
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearCommentBox(currentCommentBox);
+        });
+    }
 }
 
 function getPostText() {
-  try {
-    if (currentPlatform === 'twitter') {
-      const tweetElement = document.querySelector('[data-testid="tweetText"]') ||
-                          document.querySelector('article [lang]') ||
-                          document.querySelector('[role="article"] [lang]');
-      return tweetElement ? tweetElement.textContent.trim() : '';
-    } else {
-      const postElement = document.querySelector('.feed-shared-update-v2__description, .feed-shared-text') ||
-                         document.querySelector('[data-id^="urn:li:activity"] .break-words');
-      return postElement ? postElement.textContent.trim() : '';
+    try {
+        if (currentPlatform === 'twitter') {
+            const tweetElement = document.querySelector('[data-testid="tweetText"]') ||
+                                 document.querySelector('article [lang]') ||
+                                 document.querySelector('[role="article"] [lang]');
+            return tweetElement ? tweetElement.textContent.trim() : '';
+        } else {
+            const postElement = document.querySelector('.feed-shared-update-v2__description, .feed-shared-text') ||
+                                 document.querySelector('[data-id^="urn:li:activity"] .break-words');
+            return postElement ? postElement.textContent.trim() : '';
+        }
+    } catch (error) {
+        console.error('Error getting post text:', error);
+        return '';
     }
-  } catch (error) {
-    console.error('Error getting post text:', error);
-    return '';
-  }
 }
+
 
 async function generateAIComment(postText, tone, platform) {
   if (!postText) {
@@ -265,13 +266,13 @@ async function generateAIComment(postText, tone, platform) {
     };
 
     const prompt = `You're a social media engagement assistant.
-    ${toneInstructions[tone]}
-    ${platformSpecific[platform]}
-    Respond naturally to this post in 1-2 short sentences max.
+${toneInstructions[tone]}
+${platformSpecific[platform]}
+Respond naturally to this post in 1-2 short sentences max.
 
-    Post content: "${postText.trim()}"
+Post content: "${postText.trim()}"
 
-    Generated ${tone} comment:`;
+Generated ${tone} comment:`;
 
     const modelsToTry = [
       'mistralai/mistral-small-3.1-24b-instruct:free',
@@ -347,7 +348,6 @@ async function generateAIComment(postText, tone, platform) {
 
 async function getAPIKey() {
   return new Promise((resolve, reject) => {
-    // Check if chrome.storage is available
     if (!chrome || !chrome.storage || !chrome.storage.sync) {
       console.error('Chrome storage API is not available');
       reject(new Error('Chrome storage API is not available'));
@@ -355,7 +355,6 @@ async function getAPIKey() {
     }
 
     chrome.storage.sync.get(['openRouterKey'], (result) => {
-      // Check for runtime errors safely
       if (chrome.runtime && chrome.runtime.lastError) {
         console.error('Error retrieving API key:', chrome.runtime.lastError);
         reject(chrome.runtime.lastError);
@@ -401,40 +400,274 @@ function showAPIKeyWarning() {
   }
 }
 
-function findCommentBox(element) {
-  if (!element) return null;
+// Enhanced debug function to see exactly what's in the X/Twitter DOM
+function inspectXDom() {
+  console.log('=== Detailed X/Twitter DOM Inspection ===');
 
-  // Avoid selecting the floating bar itself
-  if (element.closest('.choosyai-bar')) {
-    return null; // Prevent floating bar from being selected as comment box
-  }
+  // Look for any contentEditable elements
+  const allEditables = document.querySelectorAll('[contenteditable="true"]');
+  console.log(`Found ${allEditables.length} contentEditable elements on the page:`);
 
-  if (window.location.hostname.includes('twitter.com') ||
-      window.location.hostname.includes('x.com')) {
-    // Target the comment box inside DraftEditor-editorContainer
-    const tweetBoxContainer = element.closest('.DraftEditor-editorContainer') ||
-                              document.querySelector('.DraftEditor-editorContainer');
+  allEditables.forEach((el, i) => {
+    console.log(`ContentEditable #${i}:`, {
+      element: el,
+      role: el.getAttribute('role'),
+      dataText: el.getAttribute('data-text'),
+      parentTestId: el.closest('[data-testid]')?.getAttribute('data-testid'),
+      isVisible: isElementVisible(el),
+      textContent: el.textContent?.substring(0, 50) + (el.textContent?.length > 50 ? '...' : '')
+    });
+  });
 
-    const tweetBox = tweetBoxContainer?.querySelector('div[contenteditable="true"][role="textbox"]') ||
-                     document.querySelector('.DraftEditor-editorContainer div[contenteditable="true"][role="textbox"]');
+  // Also find any textbox roles
+  const allTextboxes = document.querySelectorAll('[role="textbox"]');
+  console.log(`Found ${allTextboxes.length} elements with role="textbox":`);
 
-    console.log('Twitter Comment Box Detection:', tweetBoxContainer, 'Final Box:', tweetBox);
-    if (tweetBox && (tweetBox.isContentEditable || tweetBox.getAttribute('role') === 'textbox')) {
-      return tweetBox;
-    }
-    return null;
-  }
+  allTextboxes.forEach((el, i) => {
+    console.log(`Textbox #${i}:`, {
+      element: el,
+      isContentEditable: el.isContentEditable,
+      dataText: el.getAttribute('data-text'),
+      parentTestId: el.closest('[data-testid]')?.getAttribute('data-testid'),
+      isVisible: isElementVisible(el),
+      textContent: el.textContent?.substring(0, 50) + (el.textContent?.length > 50 ? '...' : '')
+    });
+  });
 
-  const commentBox = element.closest('.comments-comment-box, .comment-input')?.querySelector(
-    '.comments-comment-box__editor, [role="textbox"], .ql-editor, .ql-editor.ql-blank'
-  ) || element;
+  // Look for elements with the most common Twitter attributes
+  const dataTestIds = ['tweetTextarea', 'reply', 'tweet', 'post', 'editor'];
 
-  return (commentBox?.classList?.contains('comments-comment-box__editor') ||
-          commentBox?.getAttribute('role') === 'textbox' ||
-          commentBox?.classList?.contains('ql-editor'))
-          ? commentBox : null;
+  dataTestIds.forEach(testId => {
+    const elements = document.querySelectorAll(`[data-testid*="${testId}"]`);
+    console.log(`Found ${elements.length} elements with data-testid containing "${testId}"`);
+
+    elements.forEach((el, i) => {
+      console.log(`${testId} #${i}:`, {
+        element: el,
+        dataTestId: el.getAttribute('data-testid'),
+        hasTextbox: !!el.querySelector('[role="textbox"]'),
+        hasContentEditable: !!el.querySelector('[contenteditable="true"]'),
+        isVisible: isElementVisible(el)
+      });
+    });
+  });
+
+  // Check for specific new X structure (they often use divs with specific class names)
+  const possibleInputContainers = document.querySelectorAll('div[class*="public"], div[class*="draft"], div[class*="editor"], div[class*="text"], div[class*="input"]');
+  console.log(`Found ${possibleInputContainers.length} potential input containers`);
+
+  return "Inspection completed. Check console for details.";
 }
 
+// Helper to check if an element is visible
+function isElementVisible(el) {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetHeight > 0;
+}
+
+// Updated findCommentBox function with more comprehensive detection
+function findCommentBox(element) {
+    if (!element) return null;
+
+    // Avoid selecting the floating bar
+    if (element.closest('.choosyai-bar')) {
+        return null;
+    }
+
+    if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+        // Look for any contenteditable div within a likely tweet/reply container
+        const tweetContext = element.closest('[data-testid="tweet"], [data-testid="reply"]');
+        if (tweetContext) {
+            const editableDiv = tweetContext.querySelector('div[contenteditable="true"]');
+            if (editableDiv) {
+                console.log('X Comment Box Detection (Simple Editable):', editableDiv);
+                return editableDiv;
+            }
+        }
+        // Fallback to the specific Draft.js class if the above doesn't work immediately
+        const draftEditor = document.querySelector('div[class*="DraftStyleDefault-block"][class*="DraftStyleDefault-ltr"][contenteditable="true"]');
+        if (draftEditor) {
+            console.log('X Comment Box Detection (Fallback Draft):', draftEditor);
+            return draftEditor;
+        }
+        return null;
+    }
+
+    // LinkedIn detection (remains the same)
+    const commentBox = element.closest('.comments-comment-box, .comment-input')?.querySelector(
+        '.comments-comment-box__editor, [role="textbox"], .ql-editor, .ql-editor.ql-blank'
+    ) || element;
+
+    return (commentBox?.classList?.contains('comments-comment-box__editor') ||
+            commentBox?.getAttribute('role') === 'textbox' ||
+            commentBox?.classList?.contains('ql-editor'))
+            ? commentBox : null;
+}
+
+document.addEventListener('focusin', (e) => {
+    if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+        const potentialBox = findCommentBox(e.target);
+        if (potentialBox) {
+            console.log('Focusin Event - Target:', e.target, 'Comment Box Found:', potentialBox);
+            handleFloatingBar(potentialBox);
+        } else {
+            // Also check parents in case focus is on a child element
+            let parent = e.target.parentNode;
+            while (parent && !potentialBox && parent !== document.body) {
+                potentialBox = findCommentBox(parent);
+                if (potentialBox) {
+                    console.log('Focusin Event (Parent) - Target:', e.target, 'Comment Box Found:', potentialBox);
+                    handleFloatingBar(potentialBox);
+                    break;
+                }
+                parent = parent.parentNode;
+            }
+        }
+    } else {
+        handleFloatingBar(findCommentBox(e.target));
+    }
+}, true);
+
+document.addEventListener('click', (e) => {
+    if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+        const potentialBox = findCommentBox(e.target);
+        if (potentialBox) {
+            console.log('Click Event - Target:', e.target, 'Comment Box Found:', potentialBox);
+            handleFloatingBar(potentialBox);
+        } else {
+            // Also check parents in case click is on a child element
+            let parent = e.target.parentNode;
+            while (parent && !potentialBox && parent !== document.body) {
+                potentialBox = findCommentBox(parent);
+                if (potentialBox) {
+                    console.log('Click Event (Parent) - Target:', e.target, 'Comment Box Found:', potentialBox);
+                    handleFloatingBar(potentialBox);
+                    break;
+                }
+                parent = parent.parentNode;
+            }
+        }
+    } else {
+        handleFloatingBar(findCommentBox(e.target));
+    }
+}, true);
+
+if (document.activeElement && (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com'))) {
+    const initialBox = findCommentBox(document.activeElement);
+    if (initialBox) {
+        console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box Found:', initialBox);
+        handleFloatingBar(initialBox);
+    }
+} else if (document.activeElement) {
+    handleFloatingBar(findCommentBox(document.activeElement));
+}
+
+// Mutation Observer to detect comment box creation/focus on X
+if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+    const observer = new MutationObserver((mutationsList, observer) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(node => {
+                    if (node instanceof Element) {
+                        const commentInput = findCommentBox(node);
+                        if (commentInput) {
+                            handleFloatingBar(commentInput);
+                        }
+                        // Also check within the added nodes for nested comment boxes
+                        const nestedCommentInput = node.querySelector('div[class*="DraftStyleDefault-block"][class*="DraftStyleDefault-ltr"][contenteditable="true"]');
+                        if (nestedCommentInput) {
+                            handleFloatingBar(nestedCommentInput);
+                        }
+                    }
+                });
+            } else if (mutation.type === 'attributes' && mutation.attributeName === 'data-focus') {
+                const targetElement = mutation.target;
+                const commentInput = findCommentBox(targetElement);
+                if (commentInput) {
+                    handleFloatingBar(commentInput);
+                }
+            }
+        }
+    });
+
+    const config = { childList: true, subtree: true, attributes: true, attributeFilter: ['data-focus'] };
+    observer.observe(document.body, config);
+}
+
+document.addEventListener('focusin', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+document.addEventListener('click', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Click Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+if (document.activeElement) {
+    const commentBox = findCommentBox(document.activeElement);
+    console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}
+
+document.addEventListener('focusin', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+document.addEventListener('click', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Click Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+if (document.activeElement) {
+    const commentBox = findCommentBox(document.activeElement);
+    console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}
+
+document.addEventListener('focusin', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+document.addEventListener('click', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Click Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+if (document.activeElement) {
+    const commentBox = findCommentBox(document.activeElement);
+    console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}
+
+document.addEventListener('focusin', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+document.addEventListener('click', (e) => {
+    const commentBox = findCommentBox(e.target);
+    console.log('Click Event - Target:', e.target, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}, true);
+
+if (document.activeElement) {
+    const commentBox = findCommentBox(document.activeElement);
+    console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box:', commentBox);
+    handleFloatingBar(commentBox);
+}
+
+// Advanced insertComment function with multiple fallback methods for X/Twitter
 function insertComment(commentBox, text) {
   if (!commentBox || !text || !commentBox.isConnected) {
     console.error('Insert Comment Failed: Invalid comment box or text provided', commentBox);
@@ -442,85 +675,141 @@ function insertComment(commentBox, text) {
   }
 
   try {
-    console.log('Inserting Comment into:', commentBox, 'Text:', text, 'Is ContentEditable:', commentBox.isContentEditable);
+    console.log('Inserting Comment into:', commentBox, 'Text:', text);
 
-    // Clear the comment box completely before inserting new text
-    clearCommentBox(commentBox);
-
+    // Ensure we're focused on the comment box
     commentBox.focus();
 
     if (currentPlatform === 'twitter') {
-      if (commentBox.isContentEditable) {
-        // Simulate typing the text character by character with cursor management
-        let i = 0;
-        function typeNext() {
-          if (i < text.length) {
-            const char = text[i];
-            const range = document.createRange();
-            const selection = window.getSelection();
-            range.selectNodeContents(commentBox);
-            range.collapse(false); // Move cursor to the end
-            selection.removeAllRanges();
-            selection.addRange(range);
+      console.log('Using Twitter-specific insertion logic');
 
-            // Dispatch keydown event
-            const keydownEvent = new KeyboardEvent('keydown', {
-              key: char,
-              code: 'Key' + char.toUpperCase(),
+      // Try multiple insertion methods for X/Twitter
+      let insertionSuccessful = false;
+
+      // Method 1: Direct innerHTML manipulation
+      try {
+        commentBox.innerHTML = text;
+        const event = new Event('input', { bubbles: true, composed: true });
+        commentBox.dispatchEvent(event);
+
+        // Check if text was inserted
+        if (commentBox.textContent === text) {
+          console.log('Method 1 (innerHTML) successful');
+          insertionSuccessful = true;
+        }
+      } catch (e) {
+        console.warn('Method 1 failed:', e);
+      }
+
+      // Method 2: Clear and append text node
+      if (!insertionSuccessful) {
+        try {
+          commentBox.innerHTML = '';
+          const textNode = document.createTextNode(text);
+          commentBox.appendChild(textNode);
+
+          const event = new Event('input', { bubbles: true, composed: true });
+          commentBox.dispatchEvent(event);
+
+          if (commentBox.textContent === text) {
+            console.log('Method 2 (appendChild) successful');
+            insertionSuccessful = true;
+          }
+        } catch (e) {
+          console.warn('Method 2 failed:', e);
+        }
+      }
+
+      // Method 3: execCommand (older browsers)
+      if (!insertionSuccessful) {
+        try {
+          // First select all existing content and delete it
+          const range = document.createRange();
+          range.selectNodeContents(commentBox);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          document.execCommand('delete', false, null);
+          document.execCommand('insertText', false, text);
+
+          if (commentBox.textContent === text) {
+            console.log('Method 3 (execCommand) successful');
+            insertionSuccessful = true;
+          }
+        } catch (e) {
+          console.warn('Method 3 failed:', e);
+        }
+      }
+
+      // Method 4: Character by character simulation
+      if (!insertionSuccessful) {
+        try {
+          commentBox.innerHTML = '';
+
+          // Simulate typing character by character
+          let currentText = '';
+          for (let i = 0; i < text.length; i++) {
+            // Add next character
+            currentText += text[i];
+            commentBox.textContent = currentText;
+
+            // Dispatch keyboard events
+            const keyDownEvent = new KeyboardEvent('keydown', {
+              key: text[i],
               bubbles: true,
+              composed: true,
               cancelable: true
             });
-            commentBox.dispatchEvent(keydownEvent);
+            commentBox.dispatchEvent(keyDownEvent);
 
-            // Dispatch keypress event
-            const keypressEvent = new KeyboardEvent('keypress', {
-              key: char,
-              code: 'Key' + char.toUpperCase(),
+            const keyPressEvent = new KeyboardEvent('keypress', {
+              key: text[i],
               bubbles: true,
+              composed: true,
               cancelable: true
             });
-            commentBox.dispatchEvent(keypressEvent);
+            commentBox.dispatchEvent(keyPressEvent);
 
-            // Dispatch input event
-            const inputEvent = new Event('input', { bubbles: true });
+            const inputEvent = new InputEvent('input', {
+              bubbles: true,
+              composed: true,
+              data: text[i],
+              inputType: 'insertText'
+            });
             commentBox.dispatchEvent(inputEvent);
 
-            // Dispatch selectionchange to update cursor position
-            const selectionChangeEvent = new Event('selectionchange', { bubbles: true });
-            document.dispatchEvent(selectionChangeEvent);
-
-            i++;
-            setTimeout(typeNext, 10); // Small delay between characters
-          } else {
-            // Final events after typing is complete
-            commentBox.dispatchEvent(new Event('change', { bubbles: true }));
-            commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
-            // Force re-render by blurring and refocusing if text is not visible
-            setTimeout(() => {
-              if (!commentBox.textContent.includes(text)) {
-                commentBox.blur();
-                setTimeout(() => {
-                  commentBox.focus();
-                  commentBox.dispatchEvent(new Event('input', { bubbles: true }));
-                  console.log('Comment Inserted Successfully (after re-render):', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
-                }, 100);
-              } else {
-                console.log('Comment Inserted Successfully:', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
-              }
-            }, 50);
+            const keyUpEvent = new KeyboardEvent('keyup', {
+              key: text[i],
+              bubbles: true,
+              composed: true,
+              cancelable: true
+            });
+            commentBox.dispatchEvent(keyUpEvent);
           }
+
+          if (commentBox.textContent === text) {
+            console.log('Method 4 (character simulation) successful');
+            insertionSuccessful = true;
+          }
+        } catch (e) {
+          console.warn('Method 4 failed:', e);
         }
-        typeNext();
-      } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
-        commentBox.value = text;
-        commentBox.dispatchEvent(new Event('input', { bubbles: true }));
-        commentBox.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Final event dispatch to ensure X registers the change
+      if (insertionSuccessful) {
+        // Dispatch a comprehensive set of events to trigger X's internal state updates
+        ['input', 'change', 'blur', 'focus'].forEach(eventType => {
+          commentBox.dispatchEvent(new Event(eventType, { bubbles: true, composed: true }));
+        });
+
+        console.log('Text insertion complete, content is now:', commentBox.textContent);
       } else {
-        console.warn('Unknown comment box type for Twitter:', commentBox);
-        commentBox.textContent = text;
-        commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+        console.error('All insertion methods failed');
       }
     } else {
+      // LinkedIn insertion - unmodified as it's working
       if (commentBox.classList.contains('ql-editor')) {
         commentBox.innerHTML = text;
       } else if (commentBox.getAttribute('role') === 'textbox') {
@@ -533,11 +822,13 @@ function insertComment(commentBox, text) {
     }
   } catch (error) {
     console.error('Error inserting comment:', error);
-    commentBox.innerHTML = '';
-    const textNode = document.createTextNode(text);
-    commentBox.appendChild(textNode);
-    commentBox.dispatchEvent(new Event('input', { bubbles: true }));
-    commentBox.dispatchEvent(new Event('change', { bubbles: true }));
+    // Ultimate fallback - try simplest approach
+    try {
+      commentBox.textContent = text;
+      commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (e) {
+      console.error('Even fallback insertion failed:', e);
+    }
   }
 }
 
@@ -549,48 +840,43 @@ function clearCommentBox(commentBox) {
 
     if (currentPlatform === 'twitter') {
       if (commentBox.isContentEditable) {
-        // Clear all content and child nodes
+        // For X/Twitter, directly manipulating the DOM seems more reliable
         commentBox.innerHTML = '';
-        const childNodes = commentBox.childNodes;
-        while (childNodes.length > 0) {
-          childNodes[0].remove();
-        }
 
-        // Select all content and delete
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(commentBox);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        document.execCommand('delete', false, null);
-        range.collapse(true);
-        selection.removeAllRanges();
-
-        // Trigger a reset event to update Twitter's editor state
-        const resetEvent = new Event('input', { bubbles: true });
-        commentBox.dispatchEvent(resetEvent);
+        // Dispatch events to ensure X's internal state updates
+        const inputEvent = new Event('input', { bubbles: true, composed: true });
+        commentBox.dispatchEvent(inputEvent);
         commentBox.dispatchEvent(new Event('change', { bubbles: true }));
-        commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
 
-        console.log('After clearing (Twitter):', commentBox.innerHTML, commentBox.textContent);
-      } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
+        // Additional events to make sure X registers the change
+        commentBox.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      } else {
         commentBox.value = '';
         commentBox.dispatchEvent(new Event('input', { bubbles: true }));
         commentBox.dispatchEvent(new Event('change', { bubbles: true }));
       }
-    } else if (commentBox.classList.contains('ql-editor')) {
-      commentBox.innerHTML = '';
     } else {
-      commentBox.textContent = '';
+      if (commentBox.classList.contains('ql-editor')) {
+        commentBox.innerHTML = '';
+      } else {
+        commentBox.textContent = '';
+      }
+      const event = new Event('input', { bubbles: true });
+      commentBox.dispatchEvent(event);
     }
-
-    const event = new Event('input', { bubbles: true });
-    commentBox.dispatchEvent(event);
   } catch (error) {
     console.error('Error clearing comment box:', error);
+    // Last resort fallback
+    try {
+      commentBox.innerHTML = '';
+      commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (e) {
+      console.error('Fallback clear failed:', e);
+    }
   }
 }
 
+// Event listeners
 document.addEventListener('focusin', (e) => {
   const commentBox = findCommentBox(e.target);
   console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);
@@ -600,21 +886,27 @@ document.addEventListener('focusin', (e) => {
 document.addEventListener('click', (e) => {
   const commentBox = findCommentBox(e.target);
   console.log('Click Event - Target:', e.target, 'Comment Box:', commentBox);
-  handleFloatingBar(commentBox);
+  if (commentBox) {
+    handleFloatingBar(commentBox);
+  }
 }, true);
 
+// Initial check
 if (document.activeElement) {
   const commentBox = findCommentBox(document.activeElement);
   console.log('Initial Check - Active Element:', document.activeElement, 'Comment Box:', commentBox);
   handleFloatingBar(commentBox);
 }
 
+// Error handling
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);
 });
 
+// Clean up before unloading
 window.addEventListener('beforeunload', () => {
   if (currentFloatingBar && currentFloatingBar.parentNode) {
     currentFloatingBar.parentNode.removeChild(currentFloatingBar);
   }
 });
+

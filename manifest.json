@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Social Media Comment Generator",
+  "name": "ChoosyAI",
   "version": "1.0.0",
   "description": "Generate comments for LinkedIn and Twitter/X posts with AI.",
   "permissions": [
