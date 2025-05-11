@@ -1,30 +1,44 @@
 {
   "manifest_version": 3,
-  "name": "ChoosyAI",
-  "version": "1.0",
-  "description": "AI-powered comment generator for LinkedIn and Twitter/X",
-  "icons": {
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+  "name": "AI Comment Generator",
+  "version": "1.3",
+  "description": "Generate AI-powered replies for X and LinkedIn comments",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.openrouter.ai/*",
+    "https://*.linkedin.com/*",
+    "https://twitter.com/*",
+    "https://x.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; connect-src https://api.openrouter.ai;"
   },
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["*://*.linkedin.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["*://*.linkedin.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
+      "matches": ["https://*.linkedin.com/*", "https://twitter.com/*", "https://x.com/*"],
       "js": ["content.js"],
+      "css": ["styles.css"],
       "run_at": "document_end"
     }
   ],
-  "options_page": "options/options.html",
   "action": {
-    "default_popup": "options/options.html",
+    "default_popup": "popup.html",
     "default_icon": {
+      "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
