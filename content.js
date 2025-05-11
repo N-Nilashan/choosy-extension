@@ -107,8 +107,6 @@ function validateApiKey(apiKey) {
     return { valid: false, message: "Key too short (min 30 characters)" };
   }
 
-  // Removed maximum length restriction to support v1 keys
-
   // Updated pattern to accept hyphens in v1 keys
   if (!/^sk-or-[a-zA-Z0-9-]+$/.test(cleanedKey)) {
     return { valid: false, message: "Key contains invalid characters" };
@@ -379,9 +377,23 @@ async function generateAIResponse(prompt, apiKey) {
     if (!data.hasOwnProperty('choices')) {
       // Attempt to get error details from response
       const errorInfo = data.error || data;
-      throw new Error(
-        `Missing choices array in response. ${errorInfo.message || 'The model may be overloaded.'}`
-      );
+      let userMessage = `The AI service didn't return valid responses. This usually means:
+1. The model is currently overloaded
+2. Your prompt triggered content filters
+3. There's a temporary API issue
+
+Try:
+• Waiting a few minutes
+• Using a different tone
+• Making your prompt shorter`;
+
+      // Specific handling for rate limit exceeded
+      if (errorInfo.message && errorInfo.message.includes('free-models-per-day')) {
+        userMessage = `You've exceeded the free tier limit of ${RPD_LIMIT} requests per day. Add 10 credits to unlock 1000 free model requests per day.`;
+        throw new Error(userMessage);
+      }
+
+      throw new Error(userMessage);
     }
 
     if (!Array.isArray(data.choices)) {
@@ -423,6 +435,9 @@ Try:
 • Waiting a few minutes
 • Using a different tone
 • Making your prompt shorter`;
+    } else if (error.message.includes('free-models-per-day')) {
+      userMessage = `You've exceeded the free tier limit of ${RPD_LIMIT} requests per day. Add 10 credits to unlock 1000 free model requests per day.`;
+      showErrorNotificationWithAction(userMessage, 'Upgrade Plan', () => window.open('https://openrouter.ai/account', '_blank'));
     } else if (error.message.includes('Failed to fetch')) {
       userMessage = 'Network error. Check your internet connection.';
     } else if (error.message.includes('Invalid API key')) {
@@ -464,7 +479,7 @@ function showErrorNotification(message) {
 
   // Add close button
   const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '&times;';
+  closeBtn.innerHTML = '×';
   closeBtn.className = 'ai-error-close';
   closeBtn.addEventListener('click', () => {
     notification.style.animation = 'slideOut 0.3s forwards';
