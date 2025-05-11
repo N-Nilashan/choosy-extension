@@ -56,10 +56,19 @@
 </head>
 <body>
   <h1>AI Reply Generator Settings</h1>
-  <div class="form-group">
-    <label for="apiKey">OpenRouter API Key:</label>
-    <input type="text" id="apiKey" placeholder="Enter your OpenRouter API key">
-  </div>
+ <div class="form-group">
+  <label for="apiKey">OpenRouter API Key:</label>
+  <input type="password" id="apiKey" placeholder="Enter your OpenRouter API key">
+  <div class="key-error-message" style="color: red; display: none;"></div>
+  <div class="key-format-info">
+  <p>Key format requirements:</p>
+  <ul>
+    <li>Must start with <code>sk-or-</code></li>
+    <li>Minimum 30 characters</li>
+    <li>Only letters, numbers and hyphens</li>
+  </ul>
+</div>
+</div>
   <button id="save">Save Settings</button>
   <div id="status" class="status" style="display: none;"></div>
 
