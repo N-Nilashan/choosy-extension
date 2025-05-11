@@ -1,48 +1,167 @@
-#ai-comment-generator-bar {
-    position: fixed;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 9999;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+.ai-reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin: 12px 0;
+  z-index: 10000;
+  position: relative;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: slideIn 0.3s forwards;
 }
 
-#ai-comment-generator-bar.hidden {
-    display: none;
+.ai-reply-bar label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
 }
 
-#ai-tone-select {
-    padding: 6px 10px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+.ai-tone-container {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
 }
 
-#ai-generate-btn, #ai-clear-btn {
-    padding: 6px 12px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
+.ai-tone-container::-webkit-scrollbar {
+  height: 6px;
 }
 
-#ai-generate-btn {
-    background-color: #4CAF50;
-    color: white;
+.ai-tone-container::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-#ai-generate-btn:hover {
-    background-color: #45a049;
+.ai-tone-container::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
 }
 
-#ai-clear-btn {
-    background-color: #f44336;
-    color: white;
+.ai-tone-button {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
 }
 
-#ai-clear-btn:hover {
-    background-color: #d32f2f;
+.ai-tone-button:hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.ai-tone-button:active {
+  transform: translateY(0);
+}
+
+.ai-tone-button.selected {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.ai-tone-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ai-action-container {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.ai-reply-bar .ai-generate-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background-color: #3b82f6;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.ai-reply-bar .ai-generate-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.ai-reply-bar .ai-generate-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ai-reply-bar .ai-generate-button:disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.ai-reply-bar .ai-clear-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.ai-reply-bar .ai-clear-button:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.ai-reply-bar .ai-clear-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ai-reply-bar .ai-clear-button:disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.ai-reply-bar .loading {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
