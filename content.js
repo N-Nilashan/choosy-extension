@@ -411,14 +411,12 @@ function findCommentBox(element) {
 
   if (window.location.hostname.includes('twitter.com') ||
       window.location.hostname.includes('x.com')) {
-    const tweetBoxContainer = element.closest('[data-testid="tweetTextarea_0"]') ||
-                              element.closest('[role="textbox"]') ||
-                              document.querySelector('[data-testid="tweetTextarea_0"]');
+    // Target the comment box inside DraftEditor-editorContainer
+    const tweetBoxContainer = element.closest('.DraftEditor-editorContainer') ||
+                              document.querySelector('.DraftEditor-editorContainer');
 
-    const tweetBox = tweetBoxContainer?.querySelector('div[contenteditable="true"]') ||
-                     tweetBoxContainer?.querySelector('div[role="textbox"]') ||
-                     tweetBoxContainer ||
-                     document.querySelector('[data-testid="tweetTextarea_0"] div[contenteditable="true"]');
+    const tweetBox = tweetBoxContainer?.querySelector('div[contenteditable="true"][role="textbox"]') ||
+                     document.querySelector('.DraftEditor-editorContainer div[contenteditable="true"][role="textbox"]');
 
     console.log('Twitter Comment Box Detection:', tweetBoxContainer, 'Final Box:', tweetBox);
     if (tweetBox && (tweetBox.isContentEditable || tweetBox.getAttribute('role') === 'textbox')) {
