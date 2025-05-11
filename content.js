@@ -449,44 +449,17 @@ function insertComment(commentBox, text) {
 
     if (currentPlatform === 'twitter') {
       if (commentBox.isContentEditable) {
-        const clipboardData = new DataTransfer();
-        clipboardData.setData('text/plain', text);
+        const range = document.createRange();
+        range.selectNodeContents(commentBox);
+        range.deleteContents();
 
-        const beforeInputEvent = new InputEvent('beforeinput', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertFromPaste',
-          dataTransfer: clipboardData
-        });
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+        range.collapse(false);
 
-        const pasteEvent = new ClipboardEvent('paste', {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: clipboardData
-        });
-
-        const beforeInputPrevented = !commentBox.dispatchEvent(beforeInputEvent);
-        if (beforeInputPrevented) {
-          console.warn('beforeinput event was prevented');
-        }
-
-        const pastePrevented = !commentBox.dispatchEvent(pasteEvent);
-        if (pastePrevented) {
-          console.warn('paste event was prevented, falling back to execCommand');
-          document.execCommand('insertText', false, text); // Fallback for prevented paste
-        } else {
-          const range = document.createRange();
-          range.selectNodeContents(commentBox);
-          range.deleteContents();
-
-          const textNode = document.createTextNode(text);
-          range.insertNode(textNode);
-          range.collapse(false);
-
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
 
         commentBox.dispatchEvent(new Event('input', { bubbles: true }));
         commentBox.dispatchEvent(new Event('change', { bubbles: true }));
@@ -538,14 +511,6 @@ function clearCommentBox(commentBox) {
           childNodes[0].remove();
         }
 
-        // Simulate a deleteContent event to reset editor state
-        const deleteEvent = new InputEvent('beforeinput', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'deleteContent'
-        });
-        commentBox.dispatchEvent(deleteEvent);
-
         // Select all content and delete
         const selection = window.getSelection();
         const range = document.createRange();
@@ -556,15 +521,18 @@ function clearCommentBox(commentBox) {
         range.collapse(true);
         selection.removeAllRanges();
 
-        commentBox.dispatchEvent(new Event('input', { bubbles: true }));
+        // Trigger a reset event to update Twitter's editor state
+        const resetEvent = new Event('input', { bubbles: true });
+        commentBox.dispatchEvent(resetEvent);
         commentBox.dispatchEvent(new Event('change', { bubbles: true }));
         commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
+
+        console.log('After clearing (Twitter):', commentBox.innerHTML, commentBox.textContent);
       } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
         commentBox.value = '';
         commentBox.dispatchEvent(new Event('input', { bubbles: true }));
         commentBox.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      console.log('After clearing (Twitter):', commentBox.innerHTML, commentBox.textContent);
     } else if (commentBox.classList.contains('ql-editor')) {
       commentBox.innerHTML = '';
     } else {
