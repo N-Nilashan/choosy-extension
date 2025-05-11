@@ -1,3 +1,8 @@
+// Configuration
+const MODEL = "mistralai/mistral-7b-instruct:free";
+const MAX_TOKENS = 300;
+const TEMPERATURE = 0.7;
+
 // Observer to detect when comment/reply boxes appear
 const observer = new MutationObserver((mutations) => {
   debounceCheckForCommentBoxes();
@@ -139,6 +144,9 @@ function attachReplyBar(commentBox) {
   const container = commentBox.closest('div') || commentBox.parentNode;
   container.parentNode.insertBefore(replyBar, container.nextSibling);
 
+  // Select first tone by default
+  toneContainer.querySelector('.ai-tone-button').classList.add('selected');
+
   // Tone button interaction
   toneContainer.addEventListener('click', (e) => {
     const target = e.target.closest('.ai-tone-button');
@@ -176,28 +184,174 @@ function attachReplyBar(commentBox) {
     }
   });
 
-  // Click handler for generate button (no functionality yet)
-  generateButton.addEventListener('click', () => {
+  // Click handler for generate button
+  generateButton.addEventListener('click', async () => {
+    const selectedTone = toneContainer.querySelector('.ai-tone-button.selected').getAttribute('data-value');
+    const originalButtonText = generateButton.textContent;
+
     generateButton.innerHTML = '<div class="loading"></div>';
     generateButton.disabled = true;
+    clearButton.disabled = true;
 
-    // Simulate API call delay
-    setTimeout(() => {
-      generateButton.textContent = 'Generate AI Reply';
+    try {
+      // Get the post content to reply to
+      let postContent = '';
+      if (window.location.hostname.includes('linkedin')) {
+        // LinkedIn specific logic
+        const postElement = commentBox.closest('.feed-shared-update-v2') ||
+                          commentBox.closest('.feed-shared-update-v2__description-wrapper') ||
+                          commentBox.closest('.msg-s-event-listitem');
+        if (postElement) {
+          postContent = postElement.textContent.trim();
+        }
+      } else if (window.location.hostname.includes('twitter') || window.location.hostname.includes('x.com')) {
+        // Twitter/X specific logic
+        const tweetElement = commentBox.closest('[data-testid="tweet"]') ||
+                           commentBox.closest('[data-testid="tweetText"]');
+        if (tweetElement) {
+          postContent = tweetElement.textContent.trim();
+        }
+      }
+
+      // Get API key from storage
+      const { openRouterApiKey } = await chrome.storage.sync.get(['openRouterApiKey']);
+
+      if (!openRouterApiKey) {
+        throw new Error('No OpenRouter API key found. Please set it in the extension options.');
+      }
+
+      // Generate prompt based on tone and post content
+      const prompt = generatePrompt(selectedTone, postContent);
+
+      // Call OpenRouter API
+      const reply = await generateAIResponse(prompt, openRouterApiKey);
+
+      // Insert the reply into the comment box
+      insertReply(commentBox, reply);
+
+    } catch (error) {
+      console.error('Error generating reply:', error);
+      showErrorNotification(error.message);
+    } finally {
+      generateButton.textContent = originalButtonText;
       generateButton.disabled = false;
-    }, 1500);
+      clearButton.disabled = false;
+    }
   });
 
-  // Click handler for clear button (no functionality yet)
+  // Click handler for clear button
   clearButton.addEventListener('click', () => {
-    clearButton.disabled = true;
-    clearButton.innerHTML = '<div class="loading"></div>';
-
-    // Simulate clear action delay
-    setTimeout(() => {
-      clearButton.textContent = 'Clear';
-      clearButton.disabled = false;
-    }, 1500);
+    clearCommentBox(commentBox);
   });
 }
 
+function generatePrompt(tone, postContent) {
+  const toneInstructions = {
+    professional: "Write a professional, polished response that maintains a formal tone while being respectful.",
+    friendly: "Write a warm, approachable response that builds rapport and connection.",
+    enthusiastic: "Write an energetic, positive response that shows excitement and engagement.",
+    casual: "Write a relaxed, informal response that sounds natural and conversational.",
+    formal: "Write a highly structured, proper response using formal language and complete sentences.",
+    humorous: "Write a witty, light-hearted response that includes appropriate humor."
+  };
+
+  return `You are an expert at crafting social media responses. ${toneInstructions[tone]}
+
+  Original post: "${postContent}"
+
+  Please generate a response that matches the requested tone. Keep it concise (1-2 sentences max). Response:`;
+}
+
+async function generateAIResponse(prompt, apiKey) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://github.com/your-repo', // Optional for tracking
+      'X-Title': 'AI Reply Generator' // Optional for tracking
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: MAX_TOKENS,
+      temperature: TEMPERATURE
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Failed to generate response');
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content?.trim() || "Sorry, I couldn't generate a response.";
+}
+
+function insertReply(commentBox, reply) {
+  if (commentBox.tagName === 'TEXTAREA') {
+    // For textarea elements (some LinkedIn comment boxes)
+    commentBox.value = reply;
+    // Trigger input event for React to detect the change
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  } else if (commentBox.hasAttribute('contenteditable')) {
+    // For contenteditable divs (most LinkedIn and Twitter/X boxes)
+    commentBox.innerHTML = '';
+    commentBox.textContent = reply;
+    // Dispatch input event for React
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  } else if (commentBox.classList.contains('ql-editor')) {
+    // For Quill editors (LinkedIn)
+    commentBox.innerHTML = reply;
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  }
+}
+
+function clearCommentBox(commentBox) {
+  if (commentBox.tagName === 'TEXTAREA') {
+    commentBox.value = '';
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  } else if (commentBox.hasAttribute('contenteditable')) {
+    commentBox.innerHTML = '';
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  } else if (commentBox.classList.contains('ql-editor')) {
+    commentBox.innerHTML = '';
+    const event = new Event('input', { bubbles: true });
+    commentBox.dispatchEvent(event);
+  }
+}
+
+function showErrorNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'ai-notification';
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.bottom = '20px';
+  notification.style.right = '20px';
+  notification.style.padding = '12px 16px';
+  notification.style.backgroundColor = '#ef4444';
+  notification.style.color = 'white';
+  notification.style.borderRadius = '8px';
+  notification.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+  notification.style.zIndex = '100000';
+  notification.style.animation = 'slideIn 0.3s forwards';
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s forwards';
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 5000);
+}

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Reply Generator",
+  "name": "ChoosyAI",
   "version": "1.0",
   "description": "Generate AI-powered replies with different tones",
   "content_scripts": [
@@ -19,5 +19,14 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": []
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://openrouter.ai/api/*"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  }
 }
