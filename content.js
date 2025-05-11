@@ -6,7 +6,7 @@ let isLoading = false;
 let selectedTone = 'professional';
 let currentPlatform = 'linkedin'; // 'linkedin' or 'twitter'
 
-// Define consistent light theme styles (background, border, etc.)
+// Define consistent light theme styles
 const baseFloatingBarStyle = `
   position: relative;
   border-radius: 8px;
@@ -41,7 +41,6 @@ const twitterToneBtnActiveStyle = `
   border-color: #1DA1F2 !important;
 `;
 
-// HTML for the floating bar UI (tone buttons, generate, clear, etc.)
 const floatingBarHTML = `
 <div class="choosyai-bar" style="${baseFloatingBarStyle} ${lightStyles}">
   <!-- Tone Buttons -->
@@ -132,7 +131,6 @@ const floatingBarHTML = `
 </style>
 `;
 
-// Handle the floating bar display and interaction
 function handleFloatingBar(commentBox) {
   if (!commentBox) return;
 
@@ -151,7 +149,7 @@ function handleFloatingBar(commentBox) {
     currentFloatingBar = bar;
     currentCommentBox = commentBox;
 
-    // Detect platform (Twitter/X or LinkedIn)
+    // Detect platform
     currentPlatform = window.location.hostname.includes('twitter.com') ||
                      window.location.hostname.includes('x.com') ? 'twitter' : 'linkedin';
 
@@ -225,7 +223,6 @@ function handleFloatingBar(commentBox) {
   }
 }
 
-// Extract the text of the post to generate a comment for
 function getPostText() {
   try {
     if (currentPlatform === 'twitter') {
@@ -244,7 +241,6 @@ function getPostText() {
   }
 }
 
-// Generate an AI comment using the Gemini API directly
 async function generateAIComment(postText, tone, platform) {
   if (!postText) {
     throw new Error('No post text found to generate comment');
@@ -268,7 +264,7 @@ async function generateAIComment(postText, tone, platform) {
       twitter: "This is for Twitter/X - keep it concise and punchy (under 280 characters)."
     };
 
-    const prompt = `You are a social media engagement assistant.
+    const prompt = `You're a social media engagement assistant.
     ${toneInstructions[tone]}
     ${platformSpecific[platform]}
     Respond naturally to this post in 1-2 short sentences max.
@@ -277,94 +273,104 @@ async function generateAIComment(postText, tone, platform) {
 
     Generated ${tone} comment:`;
 
-    // Use the provided Gemini API endpoint with the API key
-    // For testing, we can hardcode the endpoint with the provided API key
-    const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAfaYHt0OLRCf6w1NKoelKxypfOK7DLzGI';
+    const modelsToTry = [
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+    ];
 
-    // Alternatively, use the dynamically fetched API key (uncomment this line and comment the hardcoded one above once confirmed working)
-    // const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    let lastError = null;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-        // No Authorization header needed; the API key is in the URL
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          maxOutputTokens: 150,
-          temperature: tone === 'funny' ? 0.7 : 0.5
+    for (const model of modelsToTry) {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{
+              role: 'user',
+              content: prompt
+            }],
+            max_tokens: 150,
+            temperature: tone === 'funny' ? 0.7 : 0.5
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded: ' + (errorData.error?.message || 'Unknown rate limit error'));
+          }
+          throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
         }
-      })
-    });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API Error Response:', errorData);
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded: ' + (errorData.error?.message || 'Unknown rate limit error'));
+        const data = await response.json();
+
+        console.log(`API Response from ${model}:`, data);
+        if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+          console.error(`Invalid API response structure from ${model}:`, data);
+          throw new Error('Invalid API response: No choices array found');
+        }
+
+        const choice = data.choices[0];
+        if (!choice.message || !choice.message.content) {
+          console.error(`Invalid choice structure from ${model}:`, choice);
+          throw new Error('Invalid API response: No message content found');
+        }
+
+        let comment = choice.message.content.trim();
+
+        if (comment.startsWith('"') && comment.endsWith('"')) {
+          comment = comment.slice(1, -1);
+        }
+
+        if (platform === 'twitter' && comment.length > 280) {
+          comment = comment.substring(0, 277) + '...';
+        }
+
+        return comment;
+      } catch (error) {
+        lastError = error;
+        console.warn(`Failed to generate comment with model ${model}:`, error.message);
+        continue;
       }
-      throw new Error(`API request failed with status ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
-    const data = await response.json();
-    console.log('API Response from Gemini:', data);
-
-    if (!data || !data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-      throw new Error('Invalid API response: No candidates array found');
-    }
-
-    const candidate = data.candidates[0];
-    if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0].text) {
-      throw new Error('Invalid API response: No text content found');
-    }
-
-    let comment = candidate.content.parts[0].text.trim();
-
-    if (comment.startsWith('"') && comment.endsWith('"')) {
-      comment = comment.slice(1, -1);
-    }
-
-    if (platform === 'twitter' && comment.length > 280) {
-      comment = comment.substring(0, 277) + '...';
-    }
-
-    return comment;
+    throw lastError || new Error('All available models failed to generate a comment');
   } catch (error) {
     console.error('Error generating AI comment:', error);
     throw error;
   }
 }
 
-// Retrieve the Google AI Studio API key from storage
 async function getAPIKey() {
   return new Promise((resolve, reject) => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.sync.get(['googleApiKey'], (result) => {
-        console.log('Retrieved API key:', result); // Debug log to verify key retrieval
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(result.googleApiKey || null);
-        }
-      });
-    } else {
-      resolve(localStorage.getItem('googleApiKey') || null);
+    // Check if chrome.storage is available
+    if (!chrome || !chrome.storage || !chrome.storage.sync) {
+      console.error('Chrome storage API is not available');
+      reject(new Error('Chrome storage API is not available'));
+      return;
     }
+
+    chrome.storage.sync.get(['openRouterKey'], (result) => {
+      // Check for runtime errors safely
+      if (chrome.runtime && chrome.runtime.lastError) {
+        console.error('Error retrieving API key:', chrome.runtime.lastError);
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(result.openRouterKey || null);
+      }
+    });
   });
 }
 
-// Show a warning if the API key is not set
 function showAPIKeyWarning() {
   if (currentFloatingBar && !currentFloatingBar.querySelector('.api-key-warning')) {
     const warning = document.createElement('div');
     warning.className = 'api-key-warning';
-    warning.textContent = 'Please set your Google AI Studio API key in extension options';
+    warning.textContent = 'Please set your API key in extension options';
     warning.style.color = 'red';
     warning.style.marginTop = '10px';
     warning.style.fontSize = '12px';
@@ -379,7 +385,7 @@ function showAPIKeyWarning() {
     optionsLink.style.textDecoration = 'underline';
     optionsLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
+      if (chrome && chrome.runtime) {
         chrome.runtime.openOptionsPage();
       }
     });
@@ -395,7 +401,6 @@ function showAPIKeyWarning() {
   }
 }
 
-// Find the comment box element on the page
 function findCommentBox(element) {
   if (!element) return null;
 
@@ -428,7 +433,6 @@ function findCommentBox(element) {
           ? commentBox : null;
 }
 
-// Insert the generated comment into the comment box
 function insertComment(commentBox, text) {
   if (!commentBox || !text) {
     console.error('Insert Comment Failed: No comment box or text provided');
@@ -519,7 +523,6 @@ function insertComment(commentBox, text) {
   }
 }
 
-// Clear the comment box before inserting a new comment
 function clearCommentBox(commentBox) {
   if (!commentBox) return;
 
@@ -575,7 +578,6 @@ function clearCommentBox(commentBox) {
   }
 }
 
-// Event listeners for focus and click to detect comment box
 document.addEventListener('focusin', (e) => {
   const commentBox = findCommentBox(e.target);
   console.log('Focusin Event - Target:', e.target, 'Comment Box:', commentBox);

@@ -1,24 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Choosy AI",
-  "version": "1.0",
-  "description": "AI-powered comment generator for LinkedIn & Twitter",
+  "name": "Social Media Comment Generator",
+  "version": "1.0.0",
+  "description": "Generate comments for LinkedIn and Twitter/X posts with AI.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "options_page": "options/options.html",
   "icons": {
-    "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "content_scripts": [{
-    "matches": [
-      "https://www.linkedin.com/*",
-      "https://twitter.com/*",
-      "https://x.com/*"
-    ],
-    "js": ["content.js"],
-    "run_at": "document_end",
-    "all_frames": true
-  }],
-  "permissions": ["storage"],
-  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
-  "options_page": "options/options.html"
+  }
 }

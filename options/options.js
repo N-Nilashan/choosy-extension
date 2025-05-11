@@ -1,30 +1,36 @@
-document.getElementById('save').addEventListener('click', () => {
-  const apiKey = document.getElementById('apiKeyInput').value.trim();
-  if (!apiKey) {
-    alert('Please enter a valid API key.');
-    return;
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  const apiKeyInput = document.getElementById('apiKey');
+  const saveButton = document.getElementById('saveButton');
+  const status = document.getElementById('status');
 
-  chrome.storage.sync.set({ googleApiKey: apiKey }, () => {
+  // Load saved API key
+  chrome.storage.sync.get(['openRouterKey'], (result) => {
     if (chrome.runtime.lastError) {
-      console.error('Error saving API key:', chrome.runtime.lastError);
-      alert('Failed to save API key. Check the console for details.');
+      console.error('Error loading API key:', chrome.runtime.lastError);
+      status.textContent = 'Error loading API key';
       return;
     }
-
-    const status = document.getElementById('status');
-    status.style.display = 'block';
-    setTimeout(() => {
-      status.style.display = 'none';
-    }, 3000);
+    if (result.openRouterKey) {
+      apiKeyInput.value = result.openRouterKey;
+    }
   });
-});
 
-// Load the saved API key when the options page is opened
-document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.sync.get(['googleApiKey'], (result) => {
-    if (result.googleApiKey) {
-      document.getElementById('apiKeyInput').value = result.googleApiKey;
+  // Save API key
+  saveButton.addEventListener('click', () => {
+    const apiKey = apiKeyInput.value.trim();
+    if (apiKey) {
+      chrome.storage.sync.set({ openRouterKey: apiKey }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving API key:', chrome.runtime.lastError);
+          status.textContent = 'Error saving API key';
+          return;
+        }
+        status.textContent = 'API key saved!';
+        setTimeout(() => { status.textContent = ''; }, 2000);
+      });
+    } else {
+      status.textContent = 'Please enter a valid API key!';
+      setTimeout(() => { status.textContent = ''; }, 2000);
     }
   });
 });
