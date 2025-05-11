@@ -453,25 +453,37 @@ function insertComment(commentBox, text) {
 
     if (currentPlatform === 'twitter') {
       if (commentBox.isContentEditable) {
+        // Method 1: Try using document.execCommand('insertText')
+        const selection = window.getSelection();
         const range = document.createRange();
         range.selectNodeContents(commentBox);
         range.deleteContents();
-
-        const textNode = document.createTextNode(text);
-        range.insertNode(textNode);
-        range.collapse(false);
-
-        const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
 
-        // Force editor state update with a delay
+        const success = document.execCommand('insertText', false, text);
+        if (success) {
+          console.log('InsertText command executed successfully');
+        } else {
+          console.warn('InsertText command failed, falling back to paste method');
+          // Method 2: Fallback to clipboard paste
+          const pasteEvent = new ClipboardEvent('paste', {
+            clipboardData: new DataTransfer(),
+            bubbles: true,
+            cancelable: true
+          });
+          pasteEvent.clipboardData.setData('text/plain', text);
+          commentBox.dispatchEvent(pasteEvent);
+        }
+
+        // Simulate typing events to ensure Draft.js picks up the change
         setTimeout(() => {
+          commentBox.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
           commentBox.dispatchEvent(new Event('input', { bubbles: true }));
           commentBox.dispatchEvent(new Event('change', { bubbles: true }));
           commentBox.dispatchEvent(new Event('compositionend', { bubbles: true }));
           console.log('Comment Inserted Successfully:', commentBox.textContent, 'InnerHTML:', commentBox.innerHTML);
-        }, 50);
+        }, 100);
 
       } else if (commentBox.tagName === 'TEXTAREA' || commentBox.getAttribute('role') === 'textbox') {
         commentBox.value = text;
