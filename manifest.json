@@ -34,6 +34,6 @@
     "open_in_tab": false
   },
   "action": {
-    "default_popup": "options.html"
+    "default_popup": "popup.html"
   }
 }

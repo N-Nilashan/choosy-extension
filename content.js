@@ -62,20 +62,23 @@ function checkForCommentBoxes() {
 
   // Twitter/X selectors
   const twitterSelectors = [
-    'div[data-testid="tweetTextarea_0"]',
-    'div[data-testid="reply"] div.public-DraftEditor-content',
-    'div[contenteditable="true"][data-testid*="tweetTextarea"]'
+     'div[data-testid="tweetTextarea_0"]', //selects comment and post
+    //  'div[data-testid="reply"] div.public-DraftEditor-content', // selects nothing
+    //  'div[contenteditable="true"][data-testid*="tweetTextarea"]', // selecting comment, post and DM
+    // 'div.public-DraftStyleDefault-ltr', //selects comment, post and dm
   ];
+
+
 
   // Fallback selectors
-  const fallbackSelectors = [
-    'div[role="textbox"][contenteditable="true"]',
-    'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
-    'div[contenteditable="true"][aria-label*="comment"]'
-  ];
+  // const fallbackSelectors = [
+  //   'div[role="textbox"][contenteditable="true"]',
+  //   'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
+  //   'div[contenteditable="true"][aria-label*="comment"]'
+  // ];
 
   // Combine all selectors
-  const allSelectors = [...linkedInSelectors, ...twitterSelectors, ...fallbackSelectors];
+   const allSelectors = [...linkedInSelectors, ...twitterSelectors];
 
   allSelectors.forEach(selector => {
     document.querySelectorAll(selector).forEach(element => {
@@ -127,6 +130,12 @@ function attachReplyBar(commentBox) {
   replyBar.className = 'ai-reply-bar';
   replyBar.setAttribute('aria-label', 'AI Reply Bar');
 
+    // Add LinkedIn-specific styling
+  if (window.location.hostname.includes('linkedin')) {
+    replyBar.style.zIndex = '999999'; // Very high z-index for LinkedIn
+    replyBar.style.position = 'relative'; // Ensure z-index works
+  }
+
   // Add RPD counter display
   const rpdDisplay = document.createElement('div');
   rpdDisplay.className = 'ai-rpd-display';
@@ -145,9 +154,7 @@ function attachReplyBar(commentBox) {
     'Professional',
     'Friendly',
     'Enthusiastic',
-    'Casual',
-    'Formal',
-    'Humorous'
+    'funny'
   ];
 
   tones.forEach((tone, index) => {
@@ -487,23 +494,7 @@ function showErrorNotification(message) {
   });
   notification.appendChild(closeBtn);
 
-  // Apply styles
-  Object.assign(notification.style, {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    padding: '12px 16px',
-    backgroundColor: '#fef2f2',
-    color: '#b91c1c',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    zIndex: '100000',
-    animation: 'slideIn 0.3s forwards',
-    maxWidth: '400px',
-    display: 'flex',
-    flexDirection: 'column'
-  });
+
 
   document.body.appendChild(notification);
 
@@ -567,45 +558,39 @@ function generatePrompt(tone, postContent) {
 
   const tonePresets = {
     professional: {
-      instruction: "Write a professional response using formal business language.",
+      instruction: "Write a professional response using formal business language that feels authentic and human, avoiding overly polished or formulaic phrasing. Focus on themes like self-improvement, productivity, or professional growth, with a motivational, practical, or reflective tone. Use short, direct sentences or bullet points to deliver clear, actionable insights, mirroring the concise style of a professional tweet. Ensure the response sounds like it could be written by a person sharing advice on a platform like X.",
       examples: [
-        "Thank you for sharing this insightful perspective.",
-        "I appreciate you taking the time to post this valuable information."
+        "Thanks for the reminder—passion really does drive focus. I’m inspired to lock in and push harder.",
+        "Great tip on sleep habits! I’ll try this tonight to boost my performance tomorrow.",
+        "I needed this. Believing in myself is the first step to making things happen—thanks for the nudge.",
+        "Solid advice on saying I don’t know.’ It’s a simple way to build trust and keep learning."
       ]
     },
     friendly: {
-      instruction: "Write a warm, personable response that builds connection.",
+      instruction: "Write a warm, personable response that builds connection, using a friendly and approachable tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like a genuine reaction from someone on a platform like X, avoiding stiff or overly formal phrasing.",
       examples: [
-        "Thanks for sharing this - really got me thinking!",
-        "Love this perspective! Appreciate you posting it."
+        "Hey, thanks for this—your passion tip really fired me up to stay focused today!",
+        "Love the sleep advice! I’m definitely trying it tonight—thanks for the boost!",
+        "This belief thing hit home—thanks for the encouragement, it’s just what I needed!",
+        "Great point on ‘I don’t know’—feels so real and helpful, thanks for sharing!"
       ]
     },
     enthusiastic: {
-      instruction: "Write an energetic, positive response showing excitement.",
+      instruction: "Write an energetic, positive response showing excitement, using an upbeat and lively tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like an excited reaction from someone on a platform like X, incorporating emojis where appropriate to enhance the enthusiasm. choose two emojies from these:🙌🎇🚀",
       examples: [
-        "This is fantastic! Thanks for sharing such great content!",
-        "Wow, what an amazing perspective! Really appreciate you posting this!"
+        "Wow, this passion tip is 🔥! I'm so pumped to lock in and get moving—thanks for the spark!",
+        "This sleep hack is a game-changer! 😍 Can't wait to try it tonight—thanks for sharing!",
+        "Yes! Believing in myself has never felt so powerful—huge thanks for this boost! 🚀",
+        "Love the 'I don't know' advice! So inspiring to keep learning—you're killing it! 🌟"
       ]
     },
-    casual: {
-      instruction: "Write a relaxed, informal response that sounds natural.",
+    funny: {
+      instruction: "Write a witty, light-hearted response with appropriate humor, using a playful and friendly tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like a humorous reaction from someone on a platform like X, incorporating emojis where appropriate to emphasize the playful tone, while ensuring the humor remains professional and respectful. choose two emojies from these: 😅🎇🚀",
       examples: [
-        "Nice post! Got me thinking about this differently.",
-        "Thanks for sharing - really interesting stuff!"
-      ]
-    },
-    formal: {
-      instruction: "Write a highly structured, proper response using formal language.",
-      examples: [
-        "I would like to express my appreciation for this valuable contribution.",
-        "This is an exceptionally well-articulated perspective that merits consideration."
-      ]
-    },
-    humorous: {
-      instruction: "Write a witty, light-hearted response with appropriate humor.",
-      examples: [
-        "This post is so good it almost makes me want to forgive you for being right!",
-        "Well played! Now I have to rethink everything I thought I knew."
+        "Okay, passion making me unstoppable? I might need to calm down before I take over the world! 😄 Thanks for the tip!",
+        "Sleep tips to be ahead of 90% of people? Guess I’ll be the early bird who gets the worm—and a nap! 😂",
+        "Believing in myself to grab anything? Does that include the last slice of pizza? 🍕 Thanks for the vibe check!",
+        "Saying 'I don't know' to build trust? I might say it too much and end up learning everything—help! 😅"
       ]
     }
   };
@@ -617,7 +602,7 @@ function generatePrompt(tone, postContent) {
   - Length: 1-2 concise sentences
   - Style: ${preset.examples.join(' OR ')}
   - Content: Must directly relate to the original post
-  - Restrictions: No hashtags, no emojis, no links
+  - Restrictions: No hashtags, no emojis, no links, no hyphen, no double quotes at the beginning and end. just give me the response
 
   Original Post: "${cleanedContent}"
 
