@@ -134,7 +134,7 @@
 }
 
 /* Glowing action buttons */
-.ai-generate-button, .ai-clear-button {
+.ai-generate-button, .ai-clear-button, .ai-cancel-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,11 +187,15 @@
 }
 
 .ai-generate-button:hover,
-.ai-clear-button:hover {
+.ai-clear-button:hover,
+.ai-cancel-button:hover
+{
   transform: translateY(-3px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
-
+.ai-cancel-button {
+  background-color:#778394
+}
 .ai-generate-button:hover::after,
 .ai-clear-button:hover::after {
   opacity: 0.6;
