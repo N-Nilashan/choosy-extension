@@ -804,44 +804,40 @@ function generatePrompt(tone, postContent) {
     .trim()
     .substring(0, 500);
 
-  const tonePresets = {
-    professional: {
-      instruction: "Write a professional response using formal business language that feels authentic and human, avoiding overly polished or formulaic phrasing. Focus on themes like self-improvement, productivity, or professional growth, with a motivational, practical, or reflective tone. Use short, direct sentences or bullet points to deliver clear, actionable insights, mirroring the concise style of a professional tweet. Ensure the response sounds like it could be written by a person sharing advice on a platform like X.",
-      examples: [
-        "Thanks for the reminder—passion really does drive focus. I’m inspired to lock in and push harder.",
-        "Great tip on sleep habits! I’ll try this tonight to boost my performance tomorrow.",
-        "I needed this. Believing in myself is the first step to making things happen—thanks for the nudge.",
-        "Solid advice on saying I don’t know.’ It’s a simple way to build trust and keep learning."
-      ]
-    },
-    friendly: {
-      instruction: "Write a warm, personable response that builds connection, using a friendly and approachable tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like a genuine reaction from someone on a platform like X, avoiding stiff or overly formal phrasing.",
-      examples: [
-        "Hey, thanks for this—your passion tip really fired me up to stay focused today!",
-        "Love the sleep advice! I’m definitely trying it tonight—thanks for the boost!",
-        "This belief thing hit home—thanks for the encouragement, it’s just what I needed!",
-        "Great point on ‘I don’t know’—feels so real and helpful, thanks for sharing!"
-      ]
-    },
-    enthusiastic: {
-      instruction: "Write an energetic, positive response showing excitement, using an upbeat and lively tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like an excited reaction from someone on a platform like X, incorporating emojis where appropriate to enhance the enthusiasm. choose two emojies from these:🙌🎇🚀",
-      examples: [
-        "Wow, this passion tip is 🔥! I'm so pumped to lock in and get moving—thanks for the spark!",
-        "This sleep hack is a game-changer! 😍 Can't wait to try it tonight—thanks for sharing!",
-        "Yes! Believing in myself has never felt so powerful—huge thanks for this boost! 🚀",
-        "Love the 'I don't know' advice! So inspiring to keep learning—you're killing it! 🌟"
-      ]
-    },
-    funny: {
-      instruction: "Write a witty, light-hearted response with appropriate humor, using a playful and friendly tone. Focus on themes like motivation, productivity, or personal growth, and reflect the concise, authentic style of a professional tweet. Use natural language that feels like a humorous reaction from someone on a platform like X, incorporating emojis where appropriate to emphasize the playful tone, while ensuring the humor remains professional and respectful. choose two emojies from these: 😅🎇🚀",
-      examples: [
-        "Okay, passion making me unstoppable? I might need to calm down before I take over the world! 😄 Thanks for the tip!",
-        "Sleep tips to be ahead of 90% of people? Guess I’ll be the early bird who gets the worm—and a nap! 😂",
-        "Believing in myself to grab anything? Does that include the last slice of pizza? 🍕 Thanks for the vibe check!",
-        "Saying 'I don't know' to build trust? I might say it too much and end up learning everything—help! 😅"
-      ]
-    }
-  };
+const tonePresets = {
+  professional: {
+    instruction: "Respond like a seasoned expert who distills complex ideas into razor-sharp insights. Use the rhythm of: bold statement → short explanation → memorable closer. Keep sentences under 8 words. Break thoughts into standalone lines for impact.",
+    examples: [
+      "Systems win. \nWhen chaos comes,\nyour habits hold.",
+      "Clarity compounds. \nEach concise word\nbuilds understanding.",
+      "Execution matters. \nIdeas are cheap.\nShipping changes lives."
+    ]
+  },
+  friendly: {
+    instruction: "Write like you're sharing a coffee break insight with a motivated peer. Use natural speech patterns with strategic pauses. Structure as: relatable opener → personal twist → open-ended closer that invites conversation.",
+    examples: [
+      "Been there. \nThe messy middle?\nWhere growth happens.",
+      "Truth bomb: \nBuilding in public\nbeats perfect drafts.",
+      "Try this: \nOne tiny step\nthen momentum builds."
+    ]
+  },
+  enthusiastic: {
+    instruction: "Create viral-ready responses with high-energy cadence. Follow this formula: attention grabber → value nugget → emoji punctuation. Use single-sentence lines and power words. Include 1 relevant emoji that amplifies (never replaces) the message.",
+    examples: [
+      "Game changer! \nConsistency beats genius\nevery damn time 🚀",
+      "Yes! \nSmall steps daily\ncompound into legacy ✨",
+      "Fire advice! \nShow up first\nwin attention later 🔥"
+    ]
+  },
+  funny: {
+    instruction: "Write with the wit of someone who sees the absurdity in hustle culture. Structure as: setup → punchline → truth bomb. Use emojis as comedic timing devices. Keep the humor dry and self-deprecating when possible.",
+    examples: [
+      "My motivation: \nCoffee first\nadulting maybe later 😅",
+      "Real talk: \nMy to-do list\noutlives my plants 🌱",
+      "Pro tip: \nPretend you're productive\nuntil it becomes true 🤫"
+    ]
+  }
+};
 
   const preset = tonePresets[tone.toLowerCase()] || tonePresets.professional;
 
