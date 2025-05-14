@@ -846,7 +846,7 @@ const tonePresets = {
   - Length: 1-2 concise sentences
   - Style: ${preset.examples.join(' OR ')}
   - Content: Must directly relate to the original post
-  - Restrictions: No hashtags, no emojis, no links, no hyphen, no double quotes at the beginning and end. just give me the response
+  - Restrictions: No hashtags, no emojis, no links, no hyphen, no double quotes at the beginning and end.
 
   Original Post: "${cleanedContent}"
 
