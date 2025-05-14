@@ -11,7 +11,7 @@
 
 /* Base styles for the floating reply bar */
 .ai-reply-bar {
-  display: flex;
+  display: flex !important;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
@@ -21,16 +21,25 @@
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid transparent;
   border-radius: 18px;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.3),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   margin: 12px 0;
-  z-index:  2147483647 !important;
-  position: relative;
+  z-index: 2147483647 !important;
+  position: relative !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 1 !important;;
-  transform: translateY(10px);
-  animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateZ(0) !important;
+}
+
+/* LinkedIn-specific styles */
+.ai-reply-bar.linkedin-ai-reply-bar {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 2147483647 !important;
+  position: relative !important;
+  background: rgba(30, 30, 40, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Gradient border effect */
@@ -44,9 +53,7 @@
   border-radius: 18px;
   padding: 1px;
   background: var(--primary-gradient);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -54,9 +61,7 @@
 
 .ai-reply-bar:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 15px 40px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Tone selector section */
@@ -81,9 +86,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow:
-    4px 4px 8px rgba(0, 0, 0, 0.3),
-    -4px -4px 8px rgba(255, 255, 255, 0.05);
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3), -4px -4px 8px rgba(255, 255, 255, 0.05);
   position: relative;
   overflow: hidden;
   z-index: 1;
@@ -104,9 +107,7 @@
 
 .ai-tone-button:hover {
   transform: translateY(-2px);
-  box-shadow:
-    6px 6px 12px rgba(0, 0, 0, 0.4),
-    -6px -6px 12px rgba(255, 255, 255, 0.1);
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.4), -6px -6px 12px rgba(255, 255, 255, 0.1);
   color: white;
 }
 
@@ -116,17 +117,13 @@
 
 .ai-tone-button:active {
   transform: translateY(0);
-  box-shadow:
-    2px 2px 4px rgba(0, 0, 0, 0.4),
-    -2px -2px 4px rgba(255, 255, 255, 0.1);
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4), -2px -2px 4px rgba(255, 255, 255, 0.1);
 }
 
 .ai-tone-button.selected {
   background: var(--primary-gradient);
   color: white;
-  box-shadow:
-    0 4px 15px var(--border-glow),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px var(--border-glow), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Action buttons container */
@@ -261,26 +258,24 @@
 
 /* Enhanced notifications */
 .ai-notification {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  color: white;
-  font-weight: 500;
-  z-index: 100000;
-  animation:
-    slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-    pulse 2s infinite;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 400px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  transform-origin: bottom right;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  padding: 14px 18px !important;
+  border-radius: 14px !important;
+  color: white !important;
+  font-weight: 500 !important;
+  z-index: 2147483647 !important;
+  animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, pulse 2s infinite;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  max-width: 400px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  transform-origin: bottom right !important;
 }
 
 .ai-notification::before {
@@ -318,6 +313,7 @@
 /* Error notification variant */
 .ai-error-notification {
   background: var(--danger-gradient);
+  z-index: 2147483647 !important;
 }
 
 /* Success notification variant */
@@ -349,18 +345,30 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 /* Responsive adjustments */

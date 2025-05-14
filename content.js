@@ -60,36 +60,56 @@ function checkForCommentBoxes() {
     'div.msg-form__contenteditable[role="textbox"]'
   ];
 
-  // Twitter/X selectors
+  // Twitter/X selector
   const twitterSelectors = [
-     'div[data-testid="tweetTextarea_0"]', //selects comment and post
-    //  'div[data-testid="reply"] div.public-DraftEditor-content', // selects nothing
-    //  'div[contenteditable="true"][data-testid*="tweetTextarea"]', // selecting comment, post and DM
-    // 'div.public-DraftStyleDefault-ltr', //selects comment, post and dm
+    'div[data-testid="tweetTextarea_0"]' // Target for reply box on X
   ];
 
+  const fallbackSelectors = [
+   // Fallbacks
+      'div[role="textbox"][contenteditable="true"]',
+      'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
+      'div[contenteditable="true"][aria-label*="comment"]'
+  ]
 
+  // Handle LinkedIn comment boxes
+  if (window.location.hostname.includes('linkedin')) {
+    linkedInSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+        }
+      });
+    });
+  }
 
-  // Fallback selectors
-  // const fallbackSelectors = [
-  //   'div[role="textbox"][contenteditable="true"]',
-  //   'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
-  //   'div[contenteditable="true"][aria-label*="comment"]'
-  // ];
+   if (window.location.hostname.includes('linkedin')) {
+    fallbackSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+        }
+      });
+    });
+  }
 
-  // Combine all selectors
-   const allSelectors = [...linkedInSelectors, ...twitterSelectors];
-
-  allSelectors.forEach(selector => {
-    document.querySelectorAll(selector).forEach(element => {
-      // Check if the bar is missing or detached
-      const existingBar = element.parentNode.querySelector('.ai-reply-bar');
-      if (!element.dataset.aiReplyAttached || !existingBar) {
-        attachReplyBar(element);
-        element.dataset.aiReplyAttached = 'true';
+  // Handle X reply bar when /status/ is in URL
+  if ((window.location.hostname.includes('twitter') || window.location.hostname.includes('x.com')) &&
+      window.location.pathname.includes('/status/')) {
+    twitterSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        elements.forEach(element => {
+          if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+            attachReplyBar(element);
+            element.dataset.aiReplyAttached = 'true';
+          }
+        });
       }
     });
-  });
+  }
 }
 
 function validateApiKey(apiKey) {
@@ -97,20 +117,15 @@ function validateApiKey(apiKey) {
     return { valid: false, message: "No API key provided" };
   }
 
-  // Remove any whitespace
   const cleanedKey = apiKey.trim();
-
-  // Accept both v1 keys (sk-or-v1-) and standard keys (sk-or-)
   if (!cleanedKey.startsWith('sk-or-')) {
     return { valid: false, message: "Key must start with 'sk-or-'" };
   }
 
-  // Minimum length check (v1 keys are longer)
   if (cleanedKey.length < 30) {
     return { valid: false, message: "Key too short (min 30 characters)" };
   }
 
-  // Updated pattern to accept hyphens in v1 keys
   if (!/^sk-or-[a-zA-Z0-9-]+$/.test(cleanedKey)) {
     return { valid: false, message: "Key contains invalid characters" };
   }
@@ -125,15 +140,74 @@ function attachReplyBar(commentBox) {
     existingBar.remove();
   }
 
+  // Check if bar was dismissed for this comment box
+  if (commentBox.dataset.aiReplyDismissed === 'true') {
+    return;
+  }
+
   // Create the AI reply bar
   const replyBar = document.createElement('div');
-  replyBar.className = 'ai-reply-bar';
+  replyBar.className = 'ai-reply-bar linkedin-ai-reply-bar';
   replyBar.setAttribute('aria-label', 'AI Reply Bar');
+  replyBar.setAttribute('data-ai-reply-bar', 'true');
 
-    // Add LinkedIn-specific styling
+  // Apply inline styles for LinkedIn
   if (window.location.hostname.includes('linkedin')) {
-    replyBar.style.zIndex = '999999'; // Very high z-index for LinkedIn
-    replyBar.style.position = 'relative'; // Ensure z-index works
+    replyBar.style.cssText = `
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+      z-index: 2147483647 !important;
+      background: rgba(30, 30, 40, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      padding: 14px 18px !important;
+      margin: 12px 0 !important;
+      border-radius: 18px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+      transform: translateZ(0) !important;
+    `;
+  }
+
+  // Debug: Log styles
+  console.log('AI Reply Bar created with styles:', replyBar.style.cssText);
+
+  // Inject styles into parent Shadow DOM
+  let parent = commentBox;
+  while (parent) {
+    if (parent.shadowRoot) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .ai-reply-bar.linkedin-ai-reply-bar {
+          display: flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 2147483647 !important;
+        }
+        .ai-generate-button, .ai-clear-button, .ai-cancel-button {
+          background: #3b82f6 !important;
+          color: white !important;
+          padding: 6px 12px !important;
+          border: none !important;
+          border-radius: 4px !important;
+          font-size: 14px !important;
+          font-weight: 500 !important;
+          cursor: pointer !important;
+          transition: background 0.2s !important;
+          margin-left: 8px !important;
+        }
+        .ai-generate-button:hover, .ai-clear-button:hover, .ai-cancel-button:hover {
+          background: #2563eb !important;
+        }
+        .ai-generate-button:disabled, .ai-clear-button:disabled, .ai-cancel-button:disabled {
+          background: #6b7280 !important;
+          cursor: not-allowed !important;
+        }
+      `;
+      parent.shadowRoot.appendChild(style);
+      console.log('Injected styles into Shadow DOM for:', parent);
+    }
+    parent = parent.parentNode;
   }
 
   // Add RPD counter display
@@ -150,13 +224,7 @@ function attachReplyBar(commentBox) {
   toneContainer.setAttribute('role', 'radiogroup');
   toneContainer.setAttribute('aria-label', 'Select reply tone');
 
-  const tones = [
-    'Professional',
-    'Friendly',
-    'Enthusiastic',
-    'funny'
-  ];
-
+  const tones = ['Professional', 'Friendly', 'Enthusiastic', 'Funny'];
   tones.forEach((tone, index) => {
     const toneButton = document.createElement('button');
     toneButton.className = 'ai-tone-button';
@@ -185,8 +253,26 @@ function attachReplyBar(commentBox) {
   clearButton.setAttribute('aria-label', 'Clear reply');
   clearButton.disabled = false;
 
+  // Cancel button
+  const cancelButton = document.createElement('button');
+  cancelButton.className = 'ai-cancel-button';
+  cancelButton.textContent = 'Cancel';
+  cancelButton.setAttribute('aria-label', 'Cancel AI Reply Bar');
+  cancelButton.addEventListener('click', () => {
+    replyBar.remove();
+    commentBox.dataset.aiReplyDismissed = 'true';
+    // Reset dismissed state on next click
+    const resetDismissed = () => {
+      commentBox.dataset.aiReplyDismissed = 'false';
+      attachReplyBar(commentBox); // Reattach bar immediately on click
+      commentBox.removeEventListener('click', resetDismissed);
+    };
+    commentBox.addEventListener('click', resetDismissed, { once: true });
+  });
+
   actionContainer.appendChild(generateButton);
   actionContainer.appendChild(clearButton);
+  actionContainer.appendChild(cancelButton);
 
   // Label for tone container
   const toneLabel = document.createElement('label');
@@ -204,6 +290,10 @@ function attachReplyBar(commentBox) {
   const container = commentBox.closest('div') || commentBox.parentNode;
   container.parentNode.insertBefore(replyBar, container.nextSibling);
 
+  // Debug: Log insertion and computed styles
+  console.log('AI Reply Bar inserted after:', container);
+  console.log('Reply bar computed styles:', window.getComputedStyle(replyBar));
+
   // Select first tone by default
   toneContainer.querySelector('.ai-tone-button').classList.add('selected');
 
@@ -220,6 +310,22 @@ function attachReplyBar(commentBox) {
     }
   });
 
+  // Monitor visibility with MutationObserver
+  const styleObserver = new MutationObserver(() => {
+    const computedStyle = window.getComputedStyle(replyBar);
+    if (computedStyle.display === 'none' || computedStyle.opacity === '0' || computedStyle.visibility === 'hidden') {
+      replyBar.style.display = 'flex !important';
+      replyBar.style.opacity = '1 !important';
+      replyBar.style.visibility = 'visible !important';
+      console.log('Re-applied visibility styles to ai-reply-bar');
+    }
+  });
+
+  styleObserver.observe(replyBar, {
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  });
+
   // Generate button click handler
   generateButton.addEventListener('click', async () => {
     if (isRequestInProgress) {
@@ -227,7 +333,6 @@ function attachReplyBar(commentBox) {
       return;
     }
 
-    // Check RPD limit
     if (requestsToday >= RPD_LIMIT) {
       showErrorNotificationWithAction(
         `You've reached your daily limit of ${RPD_LIMIT} requests.`,
@@ -243,9 +348,9 @@ function attachReplyBar(commentBox) {
     generateButton.innerHTML = '<div class="loading"></div>';
     generateButton.disabled = true;
     clearButton.disabled = true;
+    cancelButton.disabled = true;
 
     try {
-      // Get post content
       let postContent = '';
       if (window.location.hostname.includes('linkedin')) {
         const postElement = commentBox.closest('.feed-shared-update-v2') ||
@@ -267,35 +372,27 @@ function attachReplyBar(commentBox) {
         throw new Error('Could not find post content to reply to.');
       }
 
-      // Get API key
       const { openRouterApiKey } = await chrome.storage.sync.get(['openRouterApiKey']);
-
       if (!openRouterApiKey) {
         throw new Error('No OpenRouter API key found. Please set it in the extension options.');
       }
 
-      // Validate API key (updated to support v1 keys)
       const { valid, message } = validateApiKey(openRouterApiKey);
       if (!valid) {
         throw new Error(message);
       }
 
-      // Log if using v1 key
       if (openRouterApiKey.startsWith('sk-or-v1-')) {
         console.log('Using OpenRouter v1 API key');
       }
 
-      // Generate prompt
       const prompt = generatePrompt(selectedTone, postContent);
-
-      // Call API
       const reply = await generateAIResponse(prompt, openRouterApiKey);
 
       if (!reply) {
         throw new Error('No response generated from the AI.');
       }
 
-      // Update RPD counter
       requestsToday++;
       chrome.storage.sync.set({
         requestCount: requestsToday,
@@ -303,9 +400,7 @@ function attachReplyBar(commentBox) {
       });
       rpdDisplay.textContent = `Requests today: ${requestsToday}/${RPD_LIMIT}`;
 
-      // Insert reply
       insertReply(commentBox, reply);
-
     } catch (error) {
       console.error('Error generating reply:', error);
       showErrorNotification(error.message || 'Failed to generate reply. Please try again.');
@@ -313,14 +408,188 @@ function attachReplyBar(commentBox) {
       generateButton.textContent = originalButtonText;
       generateButton.disabled = false;
       clearButton.disabled = false;
+      cancelButton.disabled = false;
     }
   });
 
-  // Clear button click handler
   clearButton.addEventListener('click', () => {
     clearCommentBox(commentBox);
   });
 }
+
+function checkForCommentBoxes() {
+  // LinkedIn selectors
+  const linkedInSelectors = [
+    'div.comments-comment-box__editor div.ql-editor',
+    'div.feed-shared-comment-box div[role="textbox"]',
+    'div[data-control-name="comment_text_input"] textarea',
+    'div.msg-form__contenteditable[role="textbox"]'
+  ];
+
+  // Twitter/X selector
+  const twitterSelectors = [
+    'div[data-testid="tweetTextarea_0"]'
+  ];
+
+  const fallbackSelectors = [
+    'div[role="textbox"][contenteditable="true"]',
+    'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
+    'div[contenteditable="true"][aria-label*="comment"]'
+  ];
+
+  // Handle LinkedIn comment boxes
+  if (window.location.hostname.includes('linkedin')) {
+    linkedInSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+          // Add click listener to reattach bar if dismissed
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
+        }
+      });
+    });
+
+    fallbackSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+          // Add click listener to reattach bar if dismissed
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
+        }
+      });
+    });
+  }
+
+  // Handle X reply bar when /status/ is in URL
+  if ((window.location.hostname.includes('twitter') || window.location.hostname.includes('x.com')) &&
+      window.location.pathname.includes('/status/')) {
+    twitterSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        elements.forEach(element => {
+          if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+            attachReplyBar(element);
+            element.dataset.aiReplyAttached = 'true';
+            // Add click listener to reattach bar if dismissed
+            element.addEventListener('click', () => {
+              if (element.dataset.aiReplyDismissed === 'true') {
+                element.dataset.aiReplyDismissed = 'false';
+                attachReplyBar(element);
+              }
+            }, { once: true });
+          }
+        });
+      }
+    });
+  }
+}
+
+function checkForCommentBoxes() {
+  // LinkedIn selectors
+  const linkedInSelectors = [
+    'div.comments-comment-box__editor div.ql-editor',
+    'div.feed-shared-comment-box div[role="textbox"]',
+    'div[data-control-name="comment_text_input"] textarea',
+    'div.msg-form__contenteditable[role="textbox"]'
+  ];
+
+  // Twitter/X selector
+  const twitterSelectors = [
+    'div[data-testid="tweetTextarea_0"]'
+  ];
+
+  const fallbackSelectors = [
+    'div[role="textbox"][contenteditable="true"]',
+    'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
+    'div[contenteditable="true"][aria-label*="comment"]'
+  ];
+
+  // Handle LinkedIn comment boxes
+  if (window.location.hostname.includes('linkedin')) {
+    linkedInSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+          // Add click listener to reattach bar if dismissed
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
+        }
+      });
+    });
+
+    fallbackSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(element => {
+        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+          attachReplyBar(element);
+          element.dataset.aiReplyAttached = 'true';
+          // Add click listener to reattach bar if dismissed
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
+        }
+      });
+    });
+  }
+
+  // Handle X reply bar when /status/ is in URL
+  if ((window.location.hostname.includes('twitter') || window.location.hostname.includes('x.com')) &&
+      window.location.pathname.includes('/status/')) {
+    twitterSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        elements.forEach(element => {
+          if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
+            attachReplyBar(element);
+            element.dataset.aiReplyAttached = 'true';
+            // Add click listener to reattach bar if dismissed
+            element.addEventListener('click', () => {
+              if (element.dataset.aiReplyDismissed === 'true') {
+                element.dataset.aiReplyDismissed = 'false';
+                attachReplyBar(element);
+              }
+            }, { once: true });
+          }
+        });
+      }
+    });
+  }
+}
+
+// Periodic visibility check
+function ensureBarVisibility() {
+  document.querySelectorAll('.ai-reply-bar.linkedin-ai-reply-bar').forEach(bar => {
+    const computedStyle = window.getComputedStyle(bar);
+    if (computedStyle.display === 'none' || computedStyle.opacity === '0' || computedStyle.visibility === 'hidden') {
+      bar.style.display = 'flex !important';
+      bar.style.opacity = '1 !important';
+      bar.style.visibility = 'visible !important';
+      console.log('Forced visibility for ai-reply-bar:', bar);
+    }
+  });
+}
+
+// Run visibility check periodically
+setInterval(ensureBarVisibility, 1000);
 
 async function generateAIResponse(prompt, apiKey) {
   if (isRequestInProgress) {
@@ -332,12 +601,10 @@ async function generateAIResponse(prompt, apiKey) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-    // Debug logging
     console.log('[AI] Sending request with prompt:', prompt.substring(0, 50) + '...');
 
-    // Make the API request
     response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       signal: controller.signal,
@@ -360,7 +627,6 @@ async function generateAIResponse(prompt, apiKey) {
 
     clearTimeout(timeoutId);
 
-    // Handle non-OK responses
     if (!response.ok) {
       let errorDetails = '';
       try {
@@ -372,7 +638,6 @@ async function generateAIResponse(prompt, apiKey) {
       throw new Error(`API responded with ${response.status}: ${errorDetails}`);
     }
 
-    // Parse and thoroughly validate response
     const data = await response.json();
     console.log('[AI] Received response:', data);
 
@@ -380,9 +645,7 @@ async function generateAIResponse(prompt, apiKey) {
       throw new Error('API returned invalid response format');
     }
 
-    // Critical fix for "No choices array" error
     if (!data.hasOwnProperty('choices')) {
-      // Attempt to get error details from response
       const errorInfo = data.error || data;
       let userMessage = `The AI service didn't return valid responses. This usually means:
 1. The model is currently overloaded
@@ -394,10 +657,8 @@ Try:
 • Using a different tone
 • Making your prompt shorter`;
 
-      // Specific handling for rate limit exceeded
       if (errorInfo.message && errorInfo.message.includes('free-models-per-day')) {
         userMessage = `You've exceeded the free tier limit of ${RPD_LIMIT} requests per day. Add 10 credits to unlock 1000 free model requests per day.`;
-        throw new Error(userMessage);
       }
 
       throw new Error(userMessage);
@@ -422,11 +683,9 @@ Try:
     }
 
     return content;
-
   } catch (error) {
     console.error('[AI] Generation failed:', error);
 
-    // Enhanced error messages with troubleshooting tips
     let userMessage = error.message;
 
     if (error.name === 'AbortError') {
@@ -455,27 +714,22 @@ Try:
   } finally {
     isRequestInProgress = false;
     if (response) {
-      // Ensure the response body is consumed to prevent memory leaks
       response.body?.cancel().catch(() => {});
     }
   }
 }
 
-// Notification functions
 function showErrorNotification(message) {
-  // Remove existing notifications
   document.querySelectorAll('.ai-error-notification').forEach(el => el.remove());
 
   const notification = document.createElement('div');
   notification.className = 'ai-error-notification';
 
-  // Add error icon
   const icon = document.createElement('span');
   icon.innerHTML = '⚠️';
   icon.style.marginRight = '8px';
   notification.appendChild(icon);
 
-  // Handle multi-line messages
   const lines = message.split('\n');
   lines.forEach((line, i) => {
     const lineEl = document.createElement('div');
@@ -484,7 +738,6 @@ function showErrorNotification(message) {
     notification.appendChild(lineEl);
   });
 
-  // Add close button
   const closeBtn = document.createElement('button');
   closeBtn.innerHTML = '×';
   closeBtn.className = 'ai-error-close';
@@ -494,11 +747,8 @@ function showErrorNotification(message) {
   });
   notification.appendChild(closeBtn);
 
-
-
   document.body.appendChild(notification);
 
-  // Auto-dismiss after 10 seconds
   setTimeout(() => {
     notification.style.animation = 'slideOut 0.3s forwards';
     setTimeout(() => notification.remove(), 300);
@@ -523,7 +773,6 @@ function showErrorNotificationWithAction(message, actionText, actionHandler) {
   notification.appendChild(messageSpan);
   notification.appendChild(actionButton);
 
-  // Apply styles
   Object.assign(notification.style, {
     position: 'fixed',
     bottom: '20px',
@@ -548,13 +797,12 @@ function showErrorNotificationWithAction(message, actionText, actionHandler) {
 }
 
 function generatePrompt(tone, postContent) {
-  // Clean and truncate the post content
   const cleanedContent = postContent
-    .replace(/[\r\n]+/g, ' ') // Replace newlines with spaces
-    .replace(/\s+/g, ' ') // Collapse multiple spaces
-    .replace(/[^\w\s.,!?']/g, '') // Remove special chars
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s.,!?']/g, '')
     .trim()
-    .substring(0, 500); // Limit to 500 chars
+    .substring(0, 500);
 
   const tonePresets = {
     professional: {
@@ -655,3 +903,21 @@ function clearCommentBox(commentBox) {
     showErrorNotification('Failed to clear the comment box.');
   }
 }
+
+function injectStylesIntoShadowRoots() {
+  document.querySelectorAll('*').forEach(element => {
+    if (element.shadowRoot) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .ai-reply-bar {
+          opacity: 1 !important;
+          visibility: visible !important;
+          display: flex !important;
+        }
+      `;
+      element.shadowRoot.appendChild(style);
+    }
+  });
+}
+// Run periodically
+setInterval(injectStylesIntoShadowRoots, 1000);
