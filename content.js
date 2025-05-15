@@ -1,5 +1,5 @@
 // Configuration
-const MODEL = "mistralai/mistral-7b-instruct:free";
+const MODEL = "nousresearch/deephermes-3-mistral-24b-preview:free";
 const MAX_TOKENS = 300;
 const TEMPERATURE = 0.7;
 const RPD_LIMIT = 50; // OpenRouter's free tier daily limit
@@ -16,7 +16,14 @@ chrome.storage.sync.get(['requestCount', 'lastRequestDate'], (result) => {
     requestsToday = result.requestCount || 0;
   } else {
     requestsToday = 0;
-    chrome.storage.sync.set({ lastRequestDate: today });
+    chrome.storage.sync.set({
+      lastRequestDate: today,
+      requestCount: 0
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Storage set error:', chrome.runtime.lastError);
+      }
+    });
   }
   lastRequestDate = today;
 });
@@ -66,11 +73,10 @@ function checkForCommentBoxes() {
   ];
 
   const fallbackSelectors = [
-   // Fallbacks
-      'div[role="textbox"][contenteditable="true"]',
-      'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
-      'div[contenteditable="true"][aria-label*="comment"]'
-  ]
+    'div[role="textbox"][contenteditable="true"]',
+    'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
+    'div[contenteditable="true"][aria-label*="comment"]'
+  ];
 
   // Handle LinkedIn comment boxes
   if (window.location.hostname.includes('linkedin')) {
@@ -79,17 +85,27 @@ function checkForCommentBoxes() {
         if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
           attachReplyBar(element);
           element.dataset.aiReplyAttached = 'true';
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
         }
       });
     });
-  }
 
-   if (window.location.hostname.includes('linkedin')) {
     fallbackSelectors.forEach(selector => {
       document.querySelectorAll(selector).forEach(element => {
         if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
           attachReplyBar(element);
           element.dataset.aiReplyAttached = 'true';
+          element.addEventListener('click', () => {
+            if (element.dataset.aiReplyDismissed === 'true') {
+              element.dataset.aiReplyDismissed = 'false';
+              attachReplyBar(element);
+            }
+          }, { once: true });
         }
       });
     });
@@ -105,6 +121,12 @@ function checkForCommentBoxes() {
           if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
             attachReplyBar(element);
             element.dataset.aiReplyAttached = 'true';
+            element.addEventListener('click', () => {
+              if (element.dataset.aiReplyDismissed === 'true') {
+                element.dataset.aiReplyDismissed = 'false';
+                attachReplyBar(element);
+              }
+            }, { once: true });
           }
         });
       }
@@ -261,10 +283,9 @@ function attachReplyBar(commentBox) {
   cancelButton.addEventListener('click', () => {
     replyBar.remove();
     commentBox.dataset.aiReplyDismissed = 'true';
-    // Reset dismissed state on next click
     const resetDismissed = () => {
       commentBox.dataset.aiReplyDismissed = 'false';
-      attachReplyBar(commentBox); // Reattach bar immediately on click
+      attachReplyBar(commentBox);
       commentBox.removeEventListener('click', resetDismissed);
     };
     commentBox.addEventListener('click', resetDismissed, { once: true });
@@ -397,6 +418,10 @@ function attachReplyBar(commentBox) {
       chrome.storage.sync.set({
         requestCount: requestsToday,
         lastRequestDate: new Date().toDateString()
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Storage set error:', chrome.runtime.lastError);
+        }
       });
       rpdDisplay.textContent = `Requests today: ${requestsToday}/${RPD_LIMIT}`;
 
@@ -444,7 +469,6 @@ function checkForCommentBoxes() {
         if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
           attachReplyBar(element);
           element.dataset.aiReplyAttached = 'true';
-          // Add click listener to reattach bar if dismissed
           element.addEventListener('click', () => {
             if (element.dataset.aiReplyDismissed === 'true') {
               element.dataset.aiReplyDismissed = 'false';
@@ -460,7 +484,6 @@ function checkForCommentBoxes() {
         if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
           attachReplyBar(element);
           element.dataset.aiReplyAttached = 'true';
-          // Add click listener to reattach bar if dismissed
           element.addEventListener('click', () => {
             if (element.dataset.aiReplyDismissed === 'true') {
               element.dataset.aiReplyDismissed = 'false';
@@ -482,86 +505,6 @@ function checkForCommentBoxes() {
           if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
             attachReplyBar(element);
             element.dataset.aiReplyAttached = 'true';
-            // Add click listener to reattach bar if dismissed
-            element.addEventListener('click', () => {
-              if (element.dataset.aiReplyDismissed === 'true') {
-                element.dataset.aiReplyDismissed = 'false';
-                attachReplyBar(element);
-              }
-            }, { once: true });
-          }
-        });
-      }
-    });
-  }
-}
-
-function checkForCommentBoxes() {
-  // LinkedIn selectors
-  const linkedInSelectors = [
-    'div.comments-comment-box__editor div.ql-editor',
-    'div.feed-shared-comment-box div[role="textbox"]',
-    'div[data-control-name="comment_text_input"] textarea',
-    'div.msg-form__contenteditable[role="textbox"]'
-  ];
-
-  // Twitter/X selector
-  const twitterSelectors = [
-    'div[data-testid="tweetTextarea_0"]'
-  ];
-
-  const fallbackSelectors = [
-    'div[role="textbox"][contenteditable="true"]',
-    'textarea[aria-label*="comment"], textarea[placeholder*="comment"]',
-    'div[contenteditable="true"][aria-label*="comment"]'
-  ];
-
-  // Handle LinkedIn comment boxes
-  if (window.location.hostname.includes('linkedin')) {
-    linkedInSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(element => {
-        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
-          attachReplyBar(element);
-          element.dataset.aiReplyAttached = 'true';
-          // Add click listener to reattach bar if dismissed
-          element.addEventListener('click', () => {
-            if (element.dataset.aiReplyDismissed === 'true') {
-              element.dataset.aiReplyDismissed = 'false';
-              attachReplyBar(element);
-            }
-          }, { once: true });
-        }
-      });
-    });
-
-    fallbackSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(element => {
-        if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
-          attachReplyBar(element);
-          element.dataset.aiReplyAttached = 'true';
-          // Add click listener to reattach bar if dismissed
-          element.addEventListener('click', () => {
-            if (element.dataset.aiReplyDismissed === 'true') {
-              element.dataset.aiReplyDismissed = 'false';
-              attachReplyBar(element);
-            }
-          }, { once: true });
-        }
-      });
-    });
-  }
-
-  // Handle X reply bar when /status/ is in URL
-  if ((window.location.hostname.includes('twitter') || window.location.hostname.includes('x.com')) &&
-      window.location.pathname.includes('/status/')) {
-    twitterSelectors.forEach(selector => {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        elements.forEach(element => {
-          if (!element.dataset.aiReplyAttached || !element.parentNode.querySelector('.ai-reply-bar')) {
-            attachReplyBar(element);
-            element.dataset.aiReplyAttached = 'true';
-            // Add click listener to reattach bar if dismissed
             element.addEventListener('click', () => {
               if (element.dataset.aiReplyDismissed === 'true') {
                 element.dataset.aiReplyDismissed = 'false';
@@ -804,18 +747,35 @@ function generatePrompt(tone, postContent, platform = 'x') {
     .trim()
     .substring(0, 500);
 
+  const systemPrompt = `You are a social media ghostwriter with deep expertise in viral content patterns.
+<think>
+1. Analyze the original post's core message and emotional tone
+2. Identify 3 engagement hooks hidden in the content
+3. Map the requested tone (${tone}) to platform-specific best practices
+4. Generate 3 candidate responses with varying structures
+5. Select the version optimizing for both authenticity and engagement
+</think>`;
+
   const platformPresets = {
     x: {
       professional: {
-        instruction: "Craft punchy insights with viral structure: Bold opener → Hard-hitting point → Mic-drop closer. Use 2-4 word sentences max. Include strategic line breaks every 5-7 words for scannability. Sound like a top-performing thread.",
+        instruction: `<think>Twitter professional tone requires:
+- Razor-sharp insights (under 8 words per line)
+- Strategic line breaks every 5-7 words
+- "Bold opener → Hard-hitting point → Mic-drop closer" structure
+- Zero fluff, maximum density of value</think>`,
         examples: [
-          "Truth.\n\nExecution beats intention\nEvery damn time",
+          "Execution beats intention\nEvery damn time",
           "Listen:\n\nConsistency compounds\nBut only if shipped",
           "Warning:\n\nPerfectionism kills\nDone beats perfect"
         ]
       },
       friendly: {
-        instruction: "Write like you're DMing a smart friend. Use conversational rhythm: Relatable observation → Personal twist → Thought-provoking finish. Keep it under 15 words total. Break into 3 visual chunks for maximum engagement.",
+        instruction: `<think>Twitter friendly tone needs:
+- Conversational rhythm like DMing a smart friend
+- 3-part structure: Relatable observation → Personal twist → Thought-provoking finish
+- Under 15 words total
+- Visual chunking for scannability</think>`,
         examples: [
           "We've all been there.\n\nThe messy middle?\nWhere magic happens.",
           "Real talk:\n\nBuilding in public >\nPolishing in private",
@@ -823,7 +783,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
         ]
       },
       enthusiastic: {
-        instruction: "Create high-energy replies that stop scrollers. Formula: Attention-grabbing opener → Valuable nugget → 1 strategic emoji. Use power words and rhythmic breaks. Make it 100% skimmable in under 2 seconds.",
+        instruction: `<think>Twitter enthusiasm demands:
+- Attention-grabbing opener (power word + emoji)
+- Value nugget in under 10 words
+- Rhythmic breaks for viral skimmability
+- Energy that stops scrollers mid-feed</think>`,
         examples: [
           "Game changer! 🚀\n\nShow up first\nWin attention later",
           "Yes! ✨\n\nTiny steps daily\nMassive results yearly",
@@ -831,7 +795,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
         ]
       },
       funny: {
-        instruction: "Write with the wit of a viral meme account. Structure: Setup → Punchline → Truth bomb. Use 1 emoji for comedic timing. Keep it self-deprecating and relatable to hustle culture.",
+        instruction: `<think>Twitter humor requires:
+- Meme-like efficiency (setup → punchline → truth bomb)
+- Self-deprecating > sarcastic
+- 1 emoji for comedic timing
+- Relatable to hustle culture</think>`,
         examples: [
           "My workflow: 😅\n\nCoffee → Panic →\nSomehow it works",
           "Real talk: 🌱\n\nMy plants die\nBut my SaaS lives",
@@ -841,7 +809,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
     },
     linkedin: {
       professional: {
-        instruction: "Write polished yet human insights. Structure: Thoughtful opener → Valuable perspective → Actionable closer. Use complete sentences but keep paragraphs to 1-2 lines. Sound like an industry leader commenting at an event.",
+        instruction: `<think>LinkedIn professionalism needs:
+- Complete yet concise sentences
+- Thoughtful opener → Valuable perspective → Actionable closer
+- Industry leader voice
+- 1-2 line paragraphs max</think>`,
         examples: [
           "This resonates deeply. The most effective systems are those that withstand the chaos of real-world execution.",
           "A crucial distinction. Sustainable growth comes from daily compounding, not sporadic intensity.",
@@ -849,7 +821,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
         ]
       },
       friendly: {
-        instruction: "Create warm, collegial responses. Flow: Appreciation → Personal connection → Open-ended reflection. Maintain professional tone while showing authentic personality. Ideal for building relationships.",
+        instruction: `<think>LinkedIn collegial tone requires:
+- Warm appreciation opener
+- Personal connection middle
+- Open-ended reflection closer
+- Professional yet approachable</think>`,
         examples: [
           "Great perspective! I've found this approach works especially well when balancing multiple priorities.",
           "Spot on. Reminds me of when I first discovered the power of consistent small wins.",
@@ -857,7 +833,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
         ]
       },
       enthusiastic: {
-        instruction: "Write with genuine excitement but LinkedIn-appropriate energy. Structure: Validation → Value add → Forward-looking note. Use exclamation points sparingly. Show don't tell your enthusiasm.",
+        instruction: `<think>LinkedIn enthusiasm demands:
+- Genuine excitement without over-exclamation
+- Validation → Value add → Forward-looking note
+- Show enthusiasm through word choice vs punctuation
+- Keep polished while energetic</think>`,
         examples: [
           "Powerful framework! The emphasis on daily action over perfect planning is game-changing for execution.",
           "Brilliant perspective! This approach transformed how our team handles creative sprints.",
@@ -865,7 +845,11 @@ function generatePrompt(tone, postContent, platform = 'x') {
         ]
       },
       funny: {
-        instruction: "Create tastefully humorous replies. Formula: Witty observation → Professional insight → Lighthearted closer. Keep humor subtle and work-appropriate. Self-deprecation works better than sarcasm.",
+        instruction: `<think>LinkedIn humor needs:
+- Subtle wit > overt jokes
+- Professional insight wrapped in light humor
+- Self-deprecation works best
+- Always work-appropriate</think>`,
         examples: [
           "This speaks to my former 'all-nighters solve everything' phase. Turns out systems beat heroics every time!",
           "I feel personally attacked by how accurate this is. The perfect reminder that consistency trumps intensity.",
@@ -878,11 +862,13 @@ function generatePrompt(tone, postContent, platform = 'x') {
   const preset = platformPresets[platform.toLowerCase()]?.[tone.toLowerCase()] ||
                platformPresets.x.professional;
 
-  return `Act as my ${platform === 'x' ? 'Twitter' : 'LinkedIn'} ghostwriter. Your reply must:
-1. Match the ${tone} tone EXACTLY as shown in the examples
-2. Use ${platform === 'x' ? 'concise, broken-line structure' : 'complete yet brief paragraphs'}
-3. Sound 100% human-written (avoid AI phrasing patterns). Strictly No hashtags.Strictly No em dashes. Strictly No double quotes at the start or end.
-4. ${platform === 'x' ? 'Maximize engagement with strategic whitespace' : 'Balance professionalism with approachability'}
+  return [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `Craft a ${platform === 'x' ? 'Twitter' : 'LinkedIn'} reply in ${tone} tone that will:
+1. Stand out in feeds
+2. Sound 100% human-written
+3. Drive engagement
+4. Strictly No hashtags.Strictly No em dashes. Strictly No double quotes at the start or end.
 
 Tone Guidelines:
 ${preset.instruction}
@@ -891,10 +877,14 @@ Examples:
 ${preset.examples.join('\n')}
 
 Original Post:
-"${cleanedContent}"
-
-Crafted Response:`;
+"${cleanedContent}"`}
+  ];
 }
+
+
+
+
+
 
 function insertReply(commentBox, reply) {
   try {
