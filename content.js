@@ -796,7 +796,7 @@ function showErrorNotificationWithAction(message, actionText, actionHandler) {
   }, 10000);
 }
 
-function generatePrompt(tone, postContent) {
+function generatePrompt(tone, postContent, platform = 'x') {
   const cleanedContent = postContent
     .replace(/[\r\n]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -804,53 +804,96 @@ function generatePrompt(tone, postContent) {
     .trim()
     .substring(0, 500);
 
-const tonePresets = {
-  professional: {
-    instruction: "Respond like a seasoned expert who distills complex ideas into razor-sharp insights. Use the rhythm of: bold statement → short explanation → memorable closer. Keep sentences under 8 words. Break thoughts into standalone lines for impact.",
-    examples: [
-      "Systems win. \nWhen chaos comes,\nyour habits hold.",
-      "Clarity compounds. \nEach concise word\nbuilds understanding.",
-      "Execution matters. \nIdeas are cheap.\nShipping changes lives."
-    ]
-  },
-  friendly: {
-    instruction: "Write like you're sharing a coffee break insight with a motivated peer. Use natural speech patterns with strategic pauses. Structure as: relatable opener → personal twist → open-ended closer that invites conversation.",
-    examples: [
-      "Been there. \nThe messy middle?\nWhere growth happens.",
-      "Truth bomb: \nBuilding in public\nbeats perfect drafts.",
-      "Try this: \nOne tiny step\nthen momentum builds."
-    ]
-  },
-  enthusiastic: {
-    instruction: "Create viral-ready responses with high-energy cadence. Follow this formula: attention grabber → value nugget → emoji punctuation. Use single-sentence lines and power words. Include 1 relevant emoji that amplifies (never replaces) the message.",
-    examples: [
-      "Game changer! \nConsistency beats genius\nevery damn time 🚀",
-      "Yes! \nSmall steps daily\ncompound into legacy ✨",
-      "Fire advice! \nShow up first\nwin attention later 🔥"
-    ]
-  },
-  funny: {
-    instruction: "Write with the wit of someone who sees the absurdity in hustle culture. Structure as: setup → punchline → truth bomb. Use emojis as comedic timing devices. Keep the humor dry and self-deprecating when possible.",
-    examples: [
-      "My motivation: \nCoffee first\nadulting maybe later 😅",
-      "Real talk: \nMy to-do list\noutlives my plants 🌱",
-      "Pro tip: \nPretend you're productive\nuntil it becomes true 🤫"
-    ]
-  }
-};
+  const platformPresets = {
+    x: {
+      professional: {
+        instruction: "Craft punchy insights with viral structure: Bold opener → Hard-hitting point → Mic-drop closer. Use 2-4 word sentences max. Include strategic line breaks every 5-7 words for scannability. Sound like a top-performing thread.",
+        examples: [
+          "Truth.\n\nExecution beats intention\nEvery damn time",
+          "Listen:\n\nConsistency compounds\nBut only if shipped",
+          "Warning:\n\nPerfectionism kills\nDone beats perfect"
+        ]
+      },
+      friendly: {
+        instruction: "Write like you're DMing a smart friend. Use conversational rhythm: Relatable observation → Personal twist → Thought-provoking finish. Keep it under 15 words total. Break into 3 visual chunks for maximum engagement.",
+        examples: [
+          "We've all been there.\n\nThe messy middle?\nWhere magic happens.",
+          "Real talk:\n\nBuilding in public >\nPolishing in private",
+          "Try this:\n\nSmall daily wins\nCompound into legacy"
+        ]
+      },
+      enthusiastic: {
+        instruction: "Create high-energy replies that stop scrollers. Formula: Attention-grabbing opener → Valuable nugget → 1 strategic emoji. Use power words and rhythmic breaks. Make it 100% skimmable in under 2 seconds.",
+        examples: [
+          "Game changer! 🚀\n\nShow up first\nWin attention later",
+          "Yes! ✨\n\nTiny steps daily\nMassive results yearly",
+          "Fire advice! 🔥\n\nBuild the audience\nThen the product"
+        ]
+      },
+      funny: {
+        instruction: "Write with the wit of a viral meme account. Structure: Setup → Punchline → Truth bomb. Use 1 emoji for comedic timing. Keep it self-deprecating and relatable to hustle culture.",
+        examples: [
+          "My workflow: 😅\n\nCoffee → Panic →\nSomehow it works",
+          "Real talk: 🌱\n\nMy plants die\nBut my SaaS lives",
+          "Pro tip: 🤫\n\nFake it till\nYou make it work"
+        ]
+      }
+    },
+    linkedin: {
+      professional: {
+        instruction: "Write polished yet human insights. Structure: Thoughtful opener → Valuable perspective → Actionable closer. Use complete sentences but keep paragraphs to 1-2 lines. Sound like an industry leader commenting at an event.",
+        examples: [
+          "This resonates deeply. The most effective systems are those that withstand the chaos of real-world execution.",
+          "A crucial distinction. Sustainable growth comes from daily compounding, not sporadic intensity.",
+          "Well said. True professionalism means shipping consistently, even when the work feels imperfect."
+        ]
+      },
+      friendly: {
+        instruction: "Create warm, collegial responses. Flow: Appreciation → Personal connection → Open-ended reflection. Maintain professional tone while showing authentic personality. Ideal for building relationships.",
+        examples: [
+          "Great perspective! I've found this approach works especially well when balancing multiple priorities.",
+          "Spot on. Reminds me of when I first discovered the power of consistent small wins.",
+          "Valuable insight. How do you maintain this discipline during particularly hectic seasons?"
+        ]
+      },
+      enthusiastic: {
+        instruction: "Write with genuine excitement but LinkedIn-appropriate energy. Structure: Validation → Value add → Forward-looking note. Use exclamation points sparingly. Show don't tell your enthusiasm.",
+        examples: [
+          "Powerful framework! The emphasis on daily action over perfect planning is game-changing for execution.",
+          "Brilliant perspective! This approach transformed how our team handles creative sprints.",
+          "Spot-on advice! Implementing these principles has dramatically improved our workflow efficiency."
+        ]
+      },
+      funny: {
+        instruction: "Create tastefully humorous replies. Formula: Witty observation → Professional insight → Lighthearted closer. Keep humor subtle and work-appropriate. Self-deprecation works better than sarcasm.",
+        examples: [
+          "This speaks to my former 'all-nighters solve everything' phase. Turns out systems beat heroics every time!",
+          "I feel personally attacked by how accurate this is. The perfect reminder that consistency trumps intensity.",
+          "Where was this advice when I was burning the midnight oil? Lesson learned: sustainable > spectacular."
+        ]
+      }
+    }
+  };
 
-  const preset = tonePresets[tone.toLowerCase()] || tonePresets.professional;
+  const preset = platformPresets[platform.toLowerCase()]?.[tone.toLowerCase()] ||
+               platformPresets.x.professional;
 
-  return `Craft a social media reply with these guidelines:
-  - Tone: ${preset.instruction}
-  - Length: 1-2 concise sentences
-  - Style: ${preset.examples.join(' OR ')}
-  - Content: Must directly relate to the original post
-  - Restrictions: No hashtags, no emojis, no links, no hyphen, no double quotes at the beginning and end.
+  return `Act as my ${platform === 'x' ? 'Twitter' : 'LinkedIn'} ghostwriter. Your reply must:
+1. Match the ${tone} tone EXACTLY as shown in the examples
+2. Use ${platform === 'x' ? 'concise, broken-line structure' : 'complete yet brief paragraphs'}
+3. Sound 100% human-written (avoid AI phrasing patterns). Strictly No hashtags.Strictly No em dashes. Strictly No double quotes at the start or end.
+4. ${platform === 'x' ? 'Maximize engagement with strategic whitespace' : 'Balance professionalism with approachability'}
 
-  Original Post: "${cleanedContent}"
+Tone Guidelines:
+${preset.instruction}
 
-  Generated Response:`;
+Examples:
+${preset.examples.join('\n')}
+
+Original Post:
+"${cleanedContent}"
+
+Crafted Response:`;
 }
 
 function insertReply(commentBox, reply) {
